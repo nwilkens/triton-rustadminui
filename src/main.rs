@@ -65,6 +65,20 @@ async fn main() -> std::io::Result<()> {
         .init();
 
     info!("Starting Triton Admin UI server");
+    
+    // Check if build-info.json exists and log its contents
+    if let Some(build_info) = StaticAssets::get("build-info.json") {
+        match std::str::from_utf8(&build_info.data) {
+            Ok(info_str) => {
+                info!("Frontend build information: {}", info_str);
+            },
+            Err(_) => {
+                info!("Frontend build information file exists but could not be read");
+            }
+        }
+    } else {
+        info!("No frontend build information found. Run the deploy.sh script in the frontend directory to update the frontend build.");
+    }
 
     // Load configuration
     let config = match config::Config::from_env() {
