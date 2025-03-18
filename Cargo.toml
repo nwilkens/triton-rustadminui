@@ -1,0 +1,63 @@
+[package]
+name = "triton-adminui"
+version = "0.1.0"
+edition = "2021"
+authors = ["MNX Cloud <info@mnx.io>"]
+description = "Modern Rust-based Triton DataCenter Admin UI"
+license = "MPL-2.0"
+
+[dependencies]
+# Web framework
+actix-web = "4.5"
+actix-files = "0.6"
+actix-cors = "0.7"
+actix-rt = "2.9"
+
+# Authentication
+jsonwebtoken = "9.0"
+bcrypt = "0.15"
+ldap3 = { version = "0.11", features = ["native-tls"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Database
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "uuid", "json", "chrono"] }
+
+# HTTP Client
+reqwest = { version = "0.11", features = ["json", "rustls-tls"] }
+native-tls = "0.2"
+
+# Async
+tokio = { version = "1.34", features = ["full"] }
+futures = "0.3"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+tracing-actix-web = "0.7"
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Utilities
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.6", features = ["v4", "serde"] }
+dotenv = "0.15"
+config = "0.13"
+lazy_static = "1.4"
+
+# Triton SDC client libraries (these will need to be implemented as Rust bindings)
+# Placeholder for now - will need to create Rust implementations
+# triton-sdc-clients = { path = "../triton-sdc-clients" }
+
+# Frontend
+# Used to serve the SPA
+rust-embed = { version = "8.0", features = ["compression"] }
+mime_guess = "2.0"
+
+[dev-dependencies]
+test-log = "0.2"
+mockall = "0.11"
