@@ -1,0 +1,15 @@
+{
+  "/cnapi/servers": "/servers",
+  "/cnapi/servers/:uuid": "/servers/:uuid",
+  "/ufds/auth": "/auth/:username",
+  "/vmapi/vms": "/vms",
+  "/vmapi/vms/:uuid": "/vms/:uuid",
+  "/napi/networks": "/networks",
+  "/napi/networks/:uuid": "/networks/:uuid",
+  "/imgapi/images": "/images",
+  "/imgapi/images/:uuid": "/images/:uuid",
+  "/papi/packages": "/packages",
+  "/papi/packages/:uuid": "/packages/:uuid",
+  "/sapi/users": "/users",
+  "/sapi/users/:uuid": "/users/:uuid"
+}

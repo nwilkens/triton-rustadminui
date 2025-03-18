@@ -1,0 +1,125 @@
+use actix_web::web;
+
+pub mod auth;
+pub mod vms;
+pub mod users;
+pub mod packages;
+pub mod images;
+pub mod platforms;
+pub mod servers;
+pub mod networks;
+pub mod ping;
+
+// use crate::auth::middleware::{require_auth, require_admin};
+
+pub fn configure_routes(cfg: &mut web::ServiceConfig) {
+    cfg.service(
+        web::scope("/api")
+            // Auth endpoints (no auth required)
+            .service(auth::login)
+            .service(auth::logout)
+            .service(auth::get_current_user)
+            
+            // Ping endpoint (health check - no auth required)
+            .service(ping::ping)
+            
+            // Protected API routes - require authentication
+            .service(
+                web::scope("")
+                    //.wrap(require_auth())
+                    
+                    // VMs endpoints
+                    .service(
+                        web::scope("/vms")
+                            .service(vms::list_vms)
+                            .service(vms::get_vm)
+                            .service(vms::create_vm)
+                            // Admin-only actions
+                            .service(
+                                web::scope("")
+                                    .wrap(require_admin())
+                                    .service(vms::update_vm)
+                                    .service(vms::delete_vm)
+                                    .service(vms::vm_action)
+                            )
+                    )
+                    
+                    // Users endpoints
+                    .service(
+                        web::scope("/users")
+                            .service(users::list_users)
+                            .service(users::get_user)
+                            // Admin-only actions
+                            .service(
+                                web::scope("")
+                                    .wrap(require_admin())
+                                    .service(users::create_user)
+                                    .service(users::update_user)
+                                    .service(users::delete_user)
+                            )
+                    )
+                    
+                    // Packages endpoints
+                    .service(
+                        web::scope("/packages")
+                            .service(packages::list_packages)
+                            .service(packages::get_package)
+                            // Admin-only actions
+                            .service(
+                                web::scope("")
+                                    .wrap(require_admin())
+                                    .service(packages::create_package)
+                                    .service(packages::update_package)
+                            )
+                    )
+                    
+                    // Images endpoints
+                    .service(
+                        web::scope("/images")
+                            .service(images::list_images)
+                            .service(images::get_image)
+                            // Admin-only actions
+                            .service(
+                                web::scope("")
+                                    .wrap(require_admin())
+                                    .service(images::update_image)
+                            )
+                    )
+                    
+                    // Platforms endpoints
+                    .service(
+                        web::scope("/platforms")
+                            .service(platforms::list_platforms)
+                    )
+                    
+                    // Servers endpoints
+                    .service(
+                        web::scope("/servers")
+                            .service(servers::list_servers)
+                            .service(servers::get_server)
+                            // Admin-only actions
+                            .service(
+                                web::scope("")
+                                    .wrap(require_admin())
+                                    .service(servers::update_server)
+                                    .service(servers::server_action)
+                            )
+                    )
+                    
+                    // Networks endpoints
+                    .service(
+                        web::scope("/networks")
+                            .service(networks::list_networks)
+                            .service(networks::get_network)
+                            // Admin-only actions
+                            .service(
+                                web::scope("")
+                                    .wrap(require_admin())
+                                    .service(networks::create_network)
+                                    .service(networks::update_network)
+                                    .service(networks::delete_network)
+                            )
+                    )
+            )
+    );
+}

@@ -1,0 +1,259 @@
+{
+  "servers": [
+    {
+      "uuid": "5042c704-3004-4a97-a7a8-af398c40f8f4",
+      "hostname": "compute-01",
+      "status": "running",
+      "setup": true,
+      "datacenter": "us-east-1",
+      "memory_total_bytes": 137438953472,
+      "memory_available_bytes": 68719476736,
+      "disk_total_bytes": 2199023255552,
+      "disk_available_bytes": 1099511627776,
+      "platform_version": "20230101T000000Z",
+      "sysinfo": {
+        "CPU Physical Cores": 16,
+        "CPU Total Cores": 32,
+        "CPU Type": "Intel(R) Xeon(R) CPU E5-2620 v4 @ 2.10GHz",
+        "MiB of Memory": 131072
+      },
+      "created_at": "2023-01-01T00:00:00Z",
+      "updated_at": "2023-01-01T00:00:00Z"
+    },
+    {
+      "uuid": "8d1a9b2c-3e4f-5a6b-7c8d-9e0f1a2b3c4d",
+      "hostname": "compute-02",
+      "status": "running",
+      "setup": true,
+      "datacenter": "us-east-1",
+      "memory_total_bytes": 274877906944,
+      "memory_available_bytes": 137438953472,
+      "disk_total_bytes": 4398046511104,
+      "disk_available_bytes": 2199023255552,
+      "platform_version": "20230101T000000Z",
+      "sysinfo": {
+        "CPU Physical Cores": 32,
+        "CPU Total Cores": 64,
+        "CPU Type": "Intel(R) Xeon(R) CPU E5-2680 v4 @ 2.40GHz",
+        "MiB of Memory": 262144
+      },
+      "created_at": "2023-01-01T00:00:00Z",
+      "updated_at": "2023-01-01T00:00:00Z"
+    },
+    {
+      "uuid": "e5f6a7b8-9c0d-1e2f-3a4b-5c6d7e8f9a0b",
+      "hostname": "compute-03",
+      "status": "offline",
+      "setup": true,
+      "datacenter": "us-east-1",
+      "memory_total_bytes": 137438953472,
+      "memory_available_bytes": 0,
+      "disk_total_bytes": 2199023255552,
+      "disk_available_bytes": 0,
+      "platform_version": "20230101T000000Z",
+      "sysinfo": {
+        "CPU Physical Cores": 16,
+        "CPU Total Cores": 32,
+        "CPU Type": "Intel(R) Xeon(R) CPU E5-2620 v4 @ 2.10GHz",
+        "MiB of Memory": 131072
+      },
+      "created_at": "2023-01-01T00:00:00Z",
+      "updated_at": "2023-01-01T00:00:00Z"
+    }
+  ],
+  "vms": [
+    {
+      "uuid": "a1b2c3d4-e5f6-a7b8-c9d0-e1f2a3b4c5d6",
+      "alias": "webserver-01",
+      "brand": "kvm",
+      "state": "running",
+      "ram": 2048,
+      "vcpus": 2,
+      "disk": 20480,
+      "owner_uuid": "1234abcd-5678-90ef-1234-5678abcd90ef",
+      "server_uuid": "5042c704-3004-4a97-a7a8-af398c40f8f4",
+      "image_uuid": "c0ffeec0-ffee-c0ff-eec0-ffeec0ffeec0",
+      "package_name": "standard-2",
+      "package_uuid": "d0e1f2a3-b4c5-d6e7-f8a9-b0c1d2e3f4a5",
+      "networks": [
+        {
+          "uuid": "f0e1d2c3-b4a5-9876-5432-1fedcba09876",
+          "name": "public",
+          "ip": "10.0.0.10"
+        }
+      ],
+      "tags": {
+        "environment": "production",
+        "service": "web"
+      },
+      "created_at": "2023-01-01T00:00:00Z",
+      "updated_at": "2023-01-15T00:00:00Z"
+    },
+    {
+      "uuid": "b2c3d4e5-f6a7-b8c9-d0e1-f2a3b4c5d6e7",
+      "alias": "database-01",
+      "brand": "joyent",
+      "state": "running",
+      "ram": 8192,
+      "vcpus": 4,
+      "disk": 102400,
+      "owner_uuid": "1234abcd-5678-90ef-1234-5678abcd90ef",
+      "server_uuid": "8d1a9b2c-3e4f-5a6b-7c8d-9e0f1a2b3c4d",
+      "image_uuid": "d0ffeec0-ffee-c0ff-eec0-ffeec0ffeec0",
+      "package_name": "standard-8",
+      "package_uuid": "e0f1a2b3-c4d5-e6f7-a8b9-c0d1e2f3a4b5",
+      "networks": [
+        {
+          "uuid": "f0e1d2c3-b4a5-9876-5432-1fedcba09876",
+          "name": "public",
+          "ip": "10.0.0.20"
+        },
+        {
+          "uuid": "e0d1c2b3-a4b5-9876-5432-1fecbda09876",
+          "name": "private",
+          "ip": "192.168.0.20"
+        }
+      ],
+      "tags": {
+        "environment": "production",
+        "service": "database"
+      },
+      "created_at": "2023-01-01T00:00:00Z",
+      "updated_at": "2023-01-15T00:00:00Z"
+    }
+  ],
+  "networks": [
+    {
+      "uuid": "f0e1d2c3-b4a5-9876-5432-1fedcba09876",
+      "name": "public",
+      "subnet": "10.0.0.0/24",
+      "gateway": "10.0.0.1",
+      "vlan_id": 100,
+      "provision_start_ip": "10.0.0.10",
+      "provision_end_ip": "10.0.0.250",
+      "owner_uuid": "1234abcd-5678-90ef-1234-5678abcd90ef",
+      "fabric": false,
+      "description": "Public network for internet access",
+      "created_at": "2023-01-01T00:00:00Z",
+      "updated_at": "2023-01-01T00:00:00Z"
+    },
+    {
+      "uuid": "e0d1c2b3-a4b5-9876-5432-1fecbda09876",
+      "name": "private",
+      "subnet": "192.168.0.0/24",
+      "gateway": "192.168.0.1",
+      "vlan_id": 200,
+      "provision_start_ip": "192.168.0.10",
+      "provision_end_ip": "192.168.0.250",
+      "owner_uuid": "1234abcd-5678-90ef-1234-5678abcd90ef",
+      "fabric": true,
+      "description": "Private network for internal communication",
+      "created_at": "2023-01-01T00:00:00Z",
+      "updated_at": "2023-01-01T00:00:00Z"
+    }
+  ],
+  "images": [
+    {
+      "uuid": "c0ffeec0-ffee-c0ff-eec0-ffeec0ffeec0",
+      "name": "ubuntu-20.04",
+      "version": "20.04.4",
+      "os": "linux",
+      "type": "zone-dataset",
+      "description": "Ubuntu 20.04 LTS (Focal Fossa) 64-bit",
+      "owner_uuid": "1234abcd-5678-90ef-1234-5678abcd90ef",
+      "public": true,
+      "state": "active",
+      "published_at": "2022-01-01T00:00:00Z",
+      "created_at": "2022-01-01T00:00:00Z",
+      "updated_at": "2022-01-01T00:00:00Z"
+    },
+    {
+      "uuid": "d0ffeec0-ffee-c0ff-eec0-ffeec0ffeec0",
+      "name": "debian-11",
+      "version": "11.3.0",
+      "os": "linux",
+      "type": "zone-dataset",
+      "description": "Debian 11 (Bullseye) 64-bit",
+      "owner_uuid": "1234abcd-5678-90ef-1234-5678abcd90ef",
+      "public": true,
+      "state": "active",
+      "published_at": "2022-03-01T00:00:00Z",
+      "created_at": "2022-03-01T00:00:00Z",
+      "updated_at": "2022-03-01T00:00:00Z"
+    }
+  ],
+  "packages": [
+    {
+      "uuid": "d0e1f2a3-b4c5-d6e7-f8a9-b0c1d2e3f4a5",
+      "name": "standard-2",
+      "vcpus": 2,
+      "memory": 2048,
+      "disk": 20480,
+      "swap": 4096,
+      "description": "Standard 2GB RAM, 2 vCPUs, 20GB Disk",
+      "owner_uuid": "1234abcd-5678-90ef-1234-5678abcd90ef",
+      "active": true,
+      "default": false,
+      "created_at": "2022-01-01T00:00:00Z",
+      "updated_at": "2022-01-01T00:00:00Z"
+    },
+    {
+      "uuid": "e0f1a2b3-c4d5-e6f7-a8b9-c0d1e2f3a4b5",
+      "name": "standard-8",
+      "vcpus": 4,
+      "memory": 8192,
+      "disk": 102400,
+      "swap": 16384,
+      "description": "Standard 8GB RAM, 4 vCPUs, 100GB Disk",
+      "owner_uuid": "1234abcd-5678-90ef-1234-5678abcd90ef",
+      "active": true,
+      "default": false,
+      "created_at": "2022-01-01T00:00:00Z",
+      "updated_at": "2022-01-01T00:00:00Z"
+    }
+  ],
+  "users": [
+    {
+      "uuid": "1234abcd-5678-90ef-1234-5678abcd90ef",
+      "login": "admin",
+      "email": "admin@example.com",
+      "name": "Administrator",
+      "memberships": [
+        {
+          "role": "admin"
+        }
+      ],
+      "created_at": "2022-01-01T00:00:00Z",
+      "updated_at": "2022-01-01T00:00:00Z",
+      "isAdmin": true
+    },
+    {
+      "uuid": "2345bcde-6789-01fa-2345-6789bcde01fa",
+      "login": "operator",
+      "email": "operator@example.com",
+      "name": "System Operator",
+      "memberships": [
+        {
+          "role": "operator"
+        }
+      ],
+      "created_at": "2022-01-01T00:00:00Z",
+      "updated_at": "2022-01-01T00:00:00Z",
+      "isAdmin": false
+    }
+  ],
+  "auth": {
+    "admin": {
+      "uuid": "1234abcd-5678-90ef-1234-5678abcd90ef",
+      "login": "admin",
+      "email": "admin@example.com",
+      "name": "Administrator",
+      "memberships": [
+        {
+          "role": "admin"
+        }
+      ],
+      "isAdmin": true
+    }
+  }
+}

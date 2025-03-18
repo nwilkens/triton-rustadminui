@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: triton-adminui
+    ports:
+      - "8080:8080"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8080
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/triton_adminui
+      - JWT_SECRET=development_secret
+      - JWT_EXPIRATION=60
+      - LOG_LEVEL=debug
+      - RUST_LOG=debug
+      - TRITON_DATACENTER=local
+      # These would be real Triton service URLs in production
+      - VMAPI_URL=http://mock-triton:3000/vmapi
+      - CNAPI_URL=http://mock-triton:3000/cnapi
+      - NAPI_URL=http://mock-triton:3000/napi
+      - IMGAPI_URL=http://mock-triton:3000/imgapi
+      - AMON_URL=http://mock-triton:3000/amon
+      - UFDS_URL=http://mock-triton:3000/ufds
+      - SAPI_URL=http://mock-triton:3000/sapi
+      - FWAPI_URL=http://mock-triton:3000/fwapi
+      - PAPI_URL=http://mock-triton:3000/papi
+      - MAHI_URL=http://mock-triton:3000/mahi
+    volumes:
+      - ./static:/app/static
+    depends_on:
+      - db
+      - mock-triton
+
+  db:
+    image: postgres:16
+    container_name: triton-adminui-db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=triton_adminui
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Mock server for development
+  mock-triton:
+    image: node:18
+    container_name: mock-triton
+    working_dir: /app
+    volumes:
+      - ./mock-server:/app
+    command: >
+      sh -c "npm install -g json-server && 
+             json-server --watch db.json --port 3000 --host 0.0.0.0 --routes routes.json"
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:
