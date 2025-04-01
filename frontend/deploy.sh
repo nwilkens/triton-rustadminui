@@ -14,12 +14,14 @@ fi
 
 # Track the original directory
 ORIGINAL_DIR=$(pwd)
+
+# Use the React frontend instead of the Vue frontend
 cd $(dirname $0)/triton-ui
 
-# Use compatibility package.json if needed
-if [ $USE_COMPAT -eq 1 ]; then
-  echo "Copying compatibility package.json"
-  cp package.json.compat package.json
+# Install dependencies if node_modules doesn't exist
+if [ ! -d "node_modules" ]; then
+  echo "Installing dependencies..."
+  npm install
 fi
 
 # Build the React frontend

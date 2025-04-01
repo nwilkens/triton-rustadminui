@@ -3,17 +3,17 @@ import { Link, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../services/AuthContext';
 import { Dialog, Menu, Transition } from '@headlessui/react';
 import {
-  Bars3Icon,
+  MenuIcon as Bars3Icon,
   HomeIcon,
   ServerIcon,
   UsersIcon,
-  XMarkIcon,
-  ComputerDesktopIcon,
-  PhotoIcon,
+  XIcon as XMarkIcon,
+  DesktopComputerIcon as ComputerDesktopIcon,
+  PhotographIcon as PhotoIcon,
   CubeIcon,
   GlobeAltIcon,
-} from '@heroicons/react/24/outline';
-import { ChevronDownIcon } from '@heroicons/react/20/solid';
+} from '@heroicons/react/outline';
+import { ChevronDownIcon } from '@heroicons/react/solid';
 
 function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(' ');
