@@ -38,43 +38,18 @@ impl PapiService {
             return Err(AppError::InternalServerError(format!("Failed to fetch packages from PAPI: {} - {}", status, error_text)));
         }
         
-        // Parse the response JSON
-        let packages_data: Vec<serde_json::Value> = response
+        // Parse the response JSON directly into our Package model
+        let packages: Vec<crate::api::packages::Package> = response
             .json()
             .await
-            .map_err(|e| AppError::InternalServerError(format!("Failed to parse PAPI response: {}", e)))?;
-            
-        // Convert the response data to our Package model
-        let packages: Vec<crate::api::packages::Package> = packages_data
-            .into_iter()
-            .filter_map(|package_data| {
-                let uuid = package_data["uuid"].as_str()?;
-                let name = package_data["name"].as_str()?;
-                let version = package_data["version"].as_str()?;
-                let memory = package_data["memory"].as_u64()?;
-                let disk = package_data["disk"].as_u64()?;
-                let vcpus = package_data["vcpus"].as_u64()? as u32;
-                let active = package_data["active"].as_bool().unwrap_or(true);
-                
-                let description = package_data["description"].as_str().map(|s| s.to_string());
-                
-                let created_at = package_data["created_at"].as_str().unwrap_or("").to_string();
-                let updated_at = package_data["updated_at"].as_str().unwrap_or("").to_string();
-                
-                Some(crate::api::packages::Package {
-                    uuid: uuid.to_string(),
-                    name: name.to_string(),
-                    version: version.to_string(),
-                    memory,
-                    disk,
-                    vcpus,
-                    active,
-                    description,
-                    created_at,
-                    updated_at,
-                })
-            })
-            .collect();
+            .map_err(|e| {
+                info!("Error parsing PAPI response: {}", e);
+                AppError::InternalServerError(format!("Failed to parse PAPI response: {}", e))
+            })?;
+        
+        for pkg in &packages {
+            info!("Found package: {} ({})", pkg.name, pkg.uuid);
+        }
             
         info!("Successfully fetched {} packages from PAPI", packages.len());
         Ok(packages)
@@ -103,54 +78,16 @@ impl PapiService {
             return Err(AppError::InternalServerError(format!("Failed to fetch package from PAPI: {} - {}", status, error_text)));
         }
         
-        // Parse the response JSON
-        let package_data: serde_json::Value = response
+        // Parse the response JSON directly into our Package model
+        let package: crate::api::packages::Package = response
             .json()
             .await
-            .map_err(|e| AppError::InternalServerError(format!("Failed to parse PAPI response: {}", e)))?;
-            
-        // Extract the required fields from the response
-        let name = package_data["name"]
-            .as_str()
-            .ok_or_else(|| AppError::InternalServerError("Name not found in PAPI response".to_string()))?;
-            
-        let version = package_data["version"]
-            .as_str()
-            .ok_or_else(|| AppError::InternalServerError("Version not found in PAPI response".to_string()))?;
-            
-        let memory = package_data["memory"]
-            .as_u64()
-            .ok_or_else(|| AppError::InternalServerError("Memory not found in PAPI response".to_string()))?;
-            
-        let disk = package_data["disk"]
-            .as_u64()
-            .ok_or_else(|| AppError::InternalServerError("Disk not found in PAPI response".to_string()))?;
-            
-        let vcpus = package_data["vcpus"]
-            .as_u64()
-            .ok_or_else(|| AppError::InternalServerError("VCPUs not found in PAPI response".to_string()))? as u32;
-            
-        let active = package_data["active"].as_bool().unwrap_or(true);
+            .map_err(|e| {
+                info!("Error parsing PAPI response: {}", e);
+                AppError::InternalServerError(format!("Failed to parse PAPI response: {}", e))
+            })?;
         
-        let description = package_data["description"].as_str().map(|s| s.to_string());
-        
-        let created_at = package_data["created_at"].as_str().unwrap_or("").to_string();
-        let updated_at = package_data["updated_at"].as_str().unwrap_or("").to_string();
-        
-        let package = crate::api::packages::Package {
-            uuid: uuid.to_string(),
-            name: name.to_string(),
-            version: version.to_string(),
-            memory,
-            disk,
-            vcpus,
-            active,
-            description,
-            created_at,
-            updated_at,
-        };
-        
-        info!("Successfully fetched package {} ({})", uuid, name);
+        info!("Successfully fetched package {} ({})", uuid, package.name);
         Ok(package)
     }
     

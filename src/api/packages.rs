@@ -19,14 +19,47 @@ pub struct PackageListParams {
 pub struct Package {
     pub uuid: String,
     pub name: String,
-    pub version: String,
-    pub memory: u64,
-    pub disk: u64,
-    pub vcpus: u32,
+    pub version: Option<String>,
+    #[serde(rename = "max_physical_memory", default)]
+    pub memory: Option<u64>,
+    #[serde(default)]
+    pub disk: Option<u64>,
+    #[serde(default)]
+    pub quota: Option<u64>,
+    #[serde(default)]
+    pub vcpus: Option<u32>,
+    #[serde(default)]
+    pub cpu_cap: Option<u32>,
+    #[serde(default)]
     pub active: bool,
+    #[serde(default)]
     pub description: Option<String>,
-    pub created_at: String,
-    pub updated_at: String,
+    #[serde(rename = "max_swap", default)]
+    pub swap: Option<u64>,
+    #[serde(default)]
+    pub owner_uuids: Option<Vec<String>>,
+    #[serde(default)]
+    pub default: Option<bool>,
+    #[serde(default)]
+    pub created_at: Option<String>,
+    #[serde(default)]
+    pub updated_at: Option<String>,
+    #[serde(default)]
+    pub v: Option<u32>, // Package version field from PAPI
+    #[serde(default)]
+    pub brand: Option<String>,
+    #[serde(default)]
+    pub group: Option<String>,
+    #[serde(default)]
+    pub max_lwps: Option<u32>,
+    #[serde(default)]
+    pub zfs_io_priority: Option<u32>,
+    #[serde(default)]
+    pub billing_tag: Option<String>,
+    #[serde(default)]
+    pub flexible_disk: Option<bool>,
+    #[serde(default)]
+    pub disks: Option<Vec<serde_json::Value>>,
 }
 
 #[get("")]
@@ -50,12 +83,12 @@ pub async fn list_packages(
             };
             
             let memory_match = match query.memory {
-                Some(memory) => package.memory >= memory,
+                Some(memory) => package.memory.unwrap_or(0) >= memory,
                 None => true,
             };
             
             let vcpus_match = match query.vcpus {
-                Some(vcpus) => package.vcpus >= vcpus,
+                Some(vcpus) => package.vcpus.unwrap_or(0) >= vcpus,
                 None => true,
             };
             

@@ -4,14 +4,28 @@ import { getPackages } from '../services/api';
 interface Package {
   uuid: string;
   name: string;
-  version: string;
-  memory: number;
-  disk: number;
-  vcpus: number;
+  version?: string;
+  memory?: number;
+  max_physical_memory?: number;
+  disk?: number;
+  quota?: number;
+  vcpus?: number;
+  cpu_cap?: number;
   active: boolean;
   description?: string;
-  created_at: string;
-  updated_at: string;
+  swap?: number;
+  max_swap?: number;
+  owner_uuids?: string[];
+  default?: boolean;
+  created_at?: string;
+  updated_at?: string;
+  v?: number;
+  brand?: string;
+  group?: string;
+  max_lwps?: number;
+  zfs_io_priority?: number;
+  billing_tag?: string;
+  flexible_disk?: boolean;
 }
 
 const PackagesList = () => {
@@ -36,17 +50,24 @@ const PackagesList = () => {
     fetchPackages();
   }, []);
 
-  const formatMemory = (bytes: number): string => {
-    const gb = bytes / (1024 * 1024 * 1024);
-    return `${gb.toFixed(1)} GB`;
+  const formatMemory = (megabytes?: number): string => {
+    if (!megabytes) return 'N/A';
+    if (megabytes >= 1024) {
+      return `${(megabytes / 1024).toFixed(1)} GB`;
+    }
+    return `${megabytes} MB`;
   };
 
-  const formatDisk = (bytes: number): string => {
-    const gb = bytes / (1024 * 1024 * 1024);
-    return `${gb.toFixed(0)} GB`;
+  const formatDisk = (megabytes?: number): string => {
+    if (!megabytes) return 'N/A';
+    if (megabytes >= 1024) {
+      return `${Math.floor(megabytes / 1024)} GB`;
+    }
+    return `${megabytes} MB`;
   };
 
-  const formatDate = (dateString: string): string => {
+  const formatDate = (dateString?: string): string => {
+    if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString();
   };
 
@@ -149,13 +170,13 @@ const PackagesList = () => {
                           {pkg.version}
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {formatMemory(pkg.memory)}
+                          {formatMemory(pkg.memory || pkg.max_physical_memory)}
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {formatDisk(pkg.disk)}
+                          {formatDisk(pkg.disk || pkg.quota)}
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {pkg.vcpus}
+                          {pkg.vcpus || 'N/A'}
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm">
                           <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(pkg.active)}`}>
