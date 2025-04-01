@@ -577,11 +577,19 @@ const VMDetail = () => {
                     <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                       {image ? (
                         <div>
-                          <span className="font-medium">{image.name}</span> {image.version}
+                          <Link to={`/images/${vm.image_uuid}`} className="font-medium text-indigo-600 hover:text-indigo-900">
+                            {image.name} {image.version}
+                          </Link>
                           <div className="text-xs text-gray-500 mt-1">{vm.image_uuid}</div>
                         </div>
                       ) : (
-                        <span>{vm.image_uuid || 'N/A'}</span>
+                        vm.image_uuid ? (
+                          <Link to={`/images/${vm.image_uuid}`} className="text-indigo-600 hover:text-indigo-900">
+                            {vm.image_uuid}
+                          </Link>
+                        ) : (
+                          <span>N/A</span>
+                        )
                       )}
                     </dd>
                   </div>
@@ -605,13 +613,21 @@ const VMDetail = () => {
                     <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                       {pkg ? (
                         <div>
-                          <span className="font-medium">{pkg.name}</span> {pkg.version}
+                          <Link to={`/packages/${vm.billing_id || vm.package_uuid}`} className="font-medium text-indigo-600 hover:text-indigo-900">
+                            {pkg.name} {pkg.version}
+                          </Link>
                           {pkg.description && (
                             <div className="text-xs text-gray-500 mt-1">{pkg.description}</div>
                           )}
                         </div>
                       ) : (
-                        <span>{vm.billing_id || vm.package_uuid || 'N/A'}</span>
+                        (vm.billing_id || vm.package_uuid) ? (
+                          <Link to={`/packages/${vm.billing_id || vm.package_uuid}`} className="text-indigo-600 hover:text-indigo-900">
+                            {vm.billing_id || vm.package_uuid}
+                          </Link>
+                        ) : (
+                          <span>N/A</span>
+                        )
                       )}
                     </dd>
                   </div>
@@ -719,11 +735,13 @@ const VMDetail = () => {
                         {jobs.map((job, index) => (
                           <tr key={index} className="hover:bg-gray-50">
                             <td className="px-6 py-4 text-sm">
-                              <div className="font-medium text-gray-900">{job.name}</div>
-                              <div className="text-xs text-gray-500 mt-1 font-mono">{job.uuid}</div>
+                              <Link to={`/jobs/${job.uuid}`} className="hover:text-indigo-600">
+                                <div className="font-medium text-gray-900">{job.name}</div>
+                                <div className="text-xs text-gray-500 mt-1 font-mono">{job.uuid}</div>
+                              </Link>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <Link to={`/jobs/${job.uuid}`} className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                                 job.execution === 'succeeded' ? 'bg-green-100 text-green-800' : 
                                 job.execution === 'failed' ? 'bg-red-100 text-red-800' : 
                                 job.execution === 'running' ? 'bg-blue-100 text-blue-800' : 
@@ -735,7 +753,7 @@ const VMDetail = () => {
                                  job.execution === 'running' ? 'Running' :
                                  job.execution === 'queued' ? 'Queued' :
                                  job.execution}
-                              </Link>
+                              </span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               {formatDate(job.created_at)}
