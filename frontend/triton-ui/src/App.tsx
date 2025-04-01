@@ -9,6 +9,7 @@ import VMsList from './pages/VMs';
 import ServersList from './pages/Servers';
 import NetworksList from './pages/Networks';
 import ImagesList from './pages/Images';
+import PackagesList from './pages/Packages';
 
 // Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -42,7 +43,8 @@ function App() {
             <Route path="servers" element={<ServersList />} />
             <Route path="networks" element={<NetworksList />} />
             <Route path="images" element={<ImagesList />} />
-            {/* Routes for packages, users to be added later */}
+            <Route path="packages" element={<PackagesList />} />
+            {/* Route for users to be added later */}
           </Route>
         </Routes>
       </Router>
