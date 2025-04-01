@@ -14,6 +14,7 @@ import PackagesList from './pages/Packages';
 
 // Lazy load components
 const VMDetail = React.lazy(() => import('./pages/VMDetail'));
+const ServerDetail = React.lazy(() => import('./pages/ServerDetail'));
 
 // Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -51,7 +52,14 @@ function App() {
                 </Suspense>
               } />
             </Route>
-            <Route path="servers" element={<ServersList />} />
+            <Route path="servers">
+              <Route index element={<ServersList />} />
+              <Route path=":uuid" element={
+                <Suspense fallback={<div className="py-6 px-4 text-center">Loading server details...</div>}>
+                  <ServerDetail />
+                </Suspense>
+              } />
+            </Route>
             <Route path="networks" element={<NetworksList />} />
             <Route path="images" element={<ImagesList />} />
             <Route path="packages" element={<PackagesList />} />

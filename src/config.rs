@@ -1,6 +1,8 @@
 use serde::Deserialize;
 use std::env;
-use anyhow::Result;
+use std::fs;
+use std::path::Path;
+use anyhow::{Result, Context};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
@@ -32,7 +34,7 @@ impl Config {
             port: env::var("PORT")
                 .unwrap_or_else(|_| "8080".to_string())
                 .parse()?,
-            database_url: env::var("DATABASE_URL")?,
+            database_url: env::var("DATABASE_URL").unwrap_or_else(|_| "".to_string()),
             jwt_secret: env::var("JWT_SECRET")?,
             jwt_expiration: env::var("JWT_EXPIRATION")
                 .unwrap_or_else(|_| "60".to_string())
@@ -52,5 +54,15 @@ impl Config {
             papi_url: env::var("PAPI_URL")?,
             mahi_url: env::var("MAHI_URL")?,
         })
+    }
+    
+    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
+        let config_str = fs::read_to_string(path)
+            .context("Failed to read config file")?;
+        
+        let config: Config = serde_json::from_str(&config_str)
+            .context("Failed to parse config file")?;
+            
+        Ok(config)
     }
 }

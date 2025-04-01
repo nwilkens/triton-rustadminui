@@ -53,6 +53,19 @@ async fn serve_static_file(path: web::Path<String>) -> HttpResponse {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    // Parse command line arguments
+    let args: Vec<String> = env::args().collect();
+    let mut config_file_path = None;
+    
+    // Handle command line arguments manually
+    for i in 1..args.len() {
+        if args[i] == "--config" || args[i] == "-c" {
+            if i + 1 < args.len() {
+                config_file_path = Some(args[i + 1].clone());
+            }
+        }
+    }
+    
     // Load environment variables from .env file if present
     dotenv().ok();
 
@@ -81,14 +94,27 @@ async fn main() -> std::io::Result<()> {
     }
 
     // Load configuration
-    let config = match config::Config::from_env() {
-        Ok(config) => config,
-        Err(e) => {
-            eprintln!("Failed to load configuration: {}", e);
-            eprintln!("Make sure all required environment variables are set in the .env file");
-            std::process::exit(1);
+    let config = if let Some(path) = config_file_path {
+        info!("Loading configuration from file: {}", path);
+        match config::Config::from_file(&path) {
+            Ok(config) => config,
+            Err(e) => {
+                eprintln!("Failed to load configuration from file {}: {}", path, e);
+                std::process::exit(1);
+            }
+        }
+    } else {
+        info!("Loading configuration from environment variables");
+        match config::Config::from_env() {
+            Ok(config) => config,
+            Err(e) => {
+                eprintln!("Failed to load configuration from environment: {}", e);
+                eprintln!("Make sure all required environment variables are set in the .env file");
+                std::process::exit(1);
+            }
         }
     };
+    
     let app_config = web::Data::new(config.clone());
     
     // Database connection pool will be initialized here

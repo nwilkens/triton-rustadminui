@@ -1,0 +1,20 @@
+{
+  "host": "0.0.0.0",
+  "port": 8080,
+  "database_url": "",
+  "jwt_secret": "your-secret-key-here",
+  "jwt_expiration": 60,
+  "log_level": "info",
+  "triton_datacenter": "us-east-1",
+  
+  "vmapi_url": "http://vmapi.triton.local",
+  "cnapi_url": "http://cnapi.triton.local",
+  "napi_url": "http://napi.triton.local",
+  "imgapi_url": "http://imgapi.triton.local",
+  "amon_url": "http://amon.triton.local",
+  "ufds_url": "ldaps://ufds.triton.local:636",
+  "sapi_url": "http://sapi.triton.local",
+  "fwapi_url": "http://fwapi.triton.local",
+  "papi_url": "http://papi.triton.local",
+  "mahi_url": "http://mahi.triton.local"
+}
