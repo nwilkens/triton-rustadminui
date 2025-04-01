@@ -55,7 +55,8 @@ pub struct Vm {
     pub customer_metadata: serde_json::Value,
     #[serde(default)]
     pub internal_metadata: serde_json::Value,
-    #[serde(default)]
+    // Ensure nics is passed through without modification
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub nics: Option<Vec<serde_json::Value>>,
 }
 

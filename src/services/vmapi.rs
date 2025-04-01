@@ -77,15 +77,9 @@ impl VmapiService {
             let disk = vm_data["quota"].as_u64().unwrap_or(0);
             let vcpus = vm_data["vcpus"].as_u64().unwrap_or(1) as u32;
             
-            // Extract IPs from nics
+            // Extract IPs from nics but also pass the whole nics array through
             let mut ips = Vec::new();
-            if let Some(nics) = vm_data["nics"].as_array() {
-                for nic in nics {
-                    if let Some(ip) = nic["ip"].as_str() {
-                        ips.push(ip.to_string());
-                    }
-                }
-            }
+            let nics = vm_data["nics"].clone(); // Clone the entire nics array to pass through
             
             let owner_uuid = match vm_data["owner_uuid"].as_str() {
                 Some(owner_uuid) => owner_uuid,
@@ -124,7 +118,7 @@ impl VmapiService {
                 tags,
                 customer_metadata,
                 internal_metadata,
-                nics: None,
+                nics: Some(nics.as_array().unwrap_or(&vec![]).to_vec()),
             });
         }
             
@@ -186,15 +180,8 @@ impl VmapiService {
             .as_u64()
             .unwrap_or(1) as u32;
             
-        // Extract IPs from nics
-        let mut ips = Vec::new();
-        if let Some(nics) = vm_data["nics"].as_array() {
-            for nic in nics {
-                if let Some(ip) = nic["ip"].as_str() {
-                    ips.push(ip.to_string());
-                }
-            }
-        }
+        // Extract the nics array
+        let nics = vm_data["nics"].clone();
         
         let owner_uuid = vm_data["owner_uuid"]
             .as_str()
@@ -235,7 +222,7 @@ impl VmapiService {
             quota: disk, // We'll use disk value for quota since we're already extracting it from quota field
             disk,
             vcpus,
-            ips,
+            ips: vec![],
             owner_uuid,
             image_uuid,
             package_uuid,
@@ -244,7 +231,7 @@ impl VmapiService {
             tags,
             customer_metadata,
             internal_metadata,
-            nics: None,
+            nics: Some(nics.as_array().unwrap_or(&vec![]).to_vec()),
         };
         
         info!("Successfully fetched VM {} ({})", uuid, alias);
