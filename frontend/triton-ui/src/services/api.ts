@@ -114,6 +114,10 @@ export const getNetworks = async () => {
   return apiClient.get('/networks');
 };
 
+export const getNetwork = async (id: string) => {
+  return apiClient.get(`/networks/${id}`);
+};
+
 // Images
 export const getImages = async () => {
   return apiClient.get('/images');
@@ -126,6 +130,10 @@ export const getImage = async (id: string) => {
 // Packages
 export const getPackages = async () => {
   return apiClient.get('/packages');
+};
+
+export const getPackage = async (id: string) => {
+  return apiClient.get(`/packages/${id}`);
 };
 
 // Dashboard

@@ -17,6 +17,9 @@ import JobsList from './pages/Jobs';
 const VMDetail = React.lazy(() => import('./pages/VMDetail'));
 const ServerDetail = React.lazy(() => import('./pages/ServerDetail'));
 const JobDetail = React.lazy(() => import('./pages/JobDetail'));
+const NetworkDetail = React.lazy(() => import('./pages/NetworkDetail'));
+const ImageDetail = React.lazy(() => import('./pages/ImageDetail'));
+const PackageDetail = React.lazy(() => import('./pages/PackageDetail'));
 
 // Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -62,9 +65,30 @@ function App() {
                 </Suspense>
               } />
             </Route>
-            <Route path="networks" element={<NetworksList />} />
-            <Route path="images" element={<ImagesList />} />
-            <Route path="packages" element={<PackagesList />} />
+            <Route path="networks">
+              <Route index element={<NetworksList />} />
+              <Route path=":uuid" element={
+                <Suspense fallback={<div className="py-6 px-4 text-center">Loading network details...</div>}>
+                  <NetworkDetail />
+                </Suspense>
+              } />
+            </Route>
+            <Route path="images">
+              <Route index element={<ImagesList />} />
+              <Route path=":uuid" element={
+                <Suspense fallback={<div className="py-6 px-4 text-center">Loading image details...</div>}>
+                  <ImageDetail />
+                </Suspense>
+              } />
+            </Route>
+            <Route path="packages">
+              <Route index element={<PackagesList />} />
+              <Route path=":uuid" element={
+                <Suspense fallback={<div className="py-6 px-4 text-center">Loading package details...</div>}>
+                  <PackageDetail />
+                </Suspense>
+              } />
+            </Route>
             <Route path="jobs">
               <Route index element={<JobsList />} />
               <Route path=":uuid" element={
