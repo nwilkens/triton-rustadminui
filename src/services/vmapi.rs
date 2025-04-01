@@ -126,6 +126,111 @@ impl VmapiService {
         Ok(vms)
     }
     
+    pub async fn list_vms_by_server(&self, server_uuid: &str) -> Result<Vec<crate::api::vms::Vm>, AppError> {
+        info!("Fetching VMs for server: {}", server_uuid);
+        
+        // Construct the URL for the VMAPI VMs endpoint with server_uuid filter
+        let vms_url = format!("{}/vms?server_uuid={}", self.base_url, server_uuid);
+        
+        // Make the request to VMAPI
+        let response = self.client
+            .get(&vms_url)
+            .send()
+            .await
+            .map_err(|e| AppError::InternalServerError(format!("Failed to fetch VMs for server from VMAPI: {}", e)))?;
+            
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(AppError::InternalServerError(format!("Failed to fetch VMs for server from VMAPI: {} - {}", status, error_text)));
+        }
+        
+        // Parse the response JSON directly into our VM model
+        let vms_data: Vec<serde_json::Value> = response
+            .json()
+            .await
+            .map_err(|e| {
+                info!("Error parsing VMAPI response: {}", e);
+                AppError::InternalServerError(format!("Failed to parse VMAPI response: {}", e))
+            })?;
+        
+        // Convert to our VM model
+        let mut vms = Vec::new();
+        
+        for vm_data in vms_data {
+            // Extract the required fields
+            let uuid = match vm_data["uuid"].as_str() {
+                Some(uuid) => uuid,
+                None => continue, // Skip if UUID is missing
+            };
+            
+            let alias = match vm_data["alias"].as_str() {
+                Some(alias) => alias,
+                None => continue, // Skip if alias is missing
+            };
+            
+            let state = match vm_data["state"].as_str() {
+                Some(state) => state,
+                None => "unknown",
+            };
+            
+            let brand = match vm_data["brand"].as_str() {
+                Some(brand) => brand,
+                None => "unknown",
+            };
+            
+            let memory = vm_data["ram"].as_u64().unwrap_or(0);
+            let disk = vm_data["quota"].as_u64().unwrap_or(0);
+            let vcpus = vm_data["vcpus"].as_u64().unwrap_or(1) as u32;
+            
+            // Extract IPs from nics but also pass the whole nics array through
+            let mut ips = Vec::new();
+            let nics = vm_data["nics"].clone(); // Clone the entire nics array to pass through
+            
+            let owner_uuid = match vm_data["owner_uuid"].as_str() {
+                Some(owner_uuid) => owner_uuid,
+                None => continue, // Skip if owner_uuid is missing
+            };
+            
+            let image_uuid = vm_data["image_uuid"].as_str().unwrap_or("").to_string();
+            let package_uuid = vm_data["billing_id"].as_str().unwrap_or("").to_string();
+            
+            // Handle different timestamp names: create_timestamp or created_at
+            let created_at = match vm_data["create_timestamp"].as_str() {
+                Some(ts) => ts.to_string(),
+                None => vm_data["created_at"].as_str().unwrap_or("").to_string(),
+            };
+            
+            let tags = vm_data["tags"].clone();
+            let customer_metadata = vm_data["customer_metadata"].clone();
+            let internal_metadata = vm_data["internal_metadata"].clone();
+            
+            vms.push(crate::api::vms::Vm {
+                uuid: uuid.to_string(),
+                alias: alias.to_string(),
+                state: state.to_string(),
+                brand: brand.to_string(),
+                memory,
+                quota: disk, // Use disk value for quota
+                disk,
+                vcpus,
+                ips,
+                owner_uuid: owner_uuid.to_string(),
+                image_uuid,
+                package_uuid,
+                server_uuid: server_uuid.to_string(), // Set to the provided server_uuid
+                created_at,
+                tags,
+                customer_metadata,
+                internal_metadata,
+                nics: Some(nics.as_array().unwrap_or(&vec![]).to_vec()),
+            });
+        }
+            
+        info!("Successfully fetched {} VMs for server {}", vms.len(), server_uuid);
+        Ok(vms)
+    }
+    
     pub async fn get_vm(&self, uuid: &str) -> Result<crate::api::vms::Vm, AppError> {
         info!("Fetching VM with UUID: {}", uuid);
         

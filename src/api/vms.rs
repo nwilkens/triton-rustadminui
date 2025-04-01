@@ -18,6 +18,7 @@ pub struct VmListParams {
     pub state: Option<String>,
     pub alias: Option<String>,
     pub tag: Option<String>,
+    pub server_uuid: Option<String>,
     pub limit: Option<u32>,
     pub offset: Option<u32>,
 }
@@ -64,13 +65,21 @@ pub struct Vm {
 pub async fn list_vms(
     _user: AuthenticatedUser,
     config: Data<Config>,
-    _query: Query<VmListParams>,
+    query: Query<VmListParams>,
 ) -> Result<HttpResponse, AppError> {
     // Create an instance of the VMAPI service
     info!("Listing VMs using VMAPI service");
     let vmapi_service = VmapiService::new(config.vmapi_url.clone());
     
-    // Call the service to get the VMs
+    // Check if server_uuid filter is applied
+    if let Some(server_uuid) = &query.server_uuid {
+        info!("Filtering VMs by server_uuid: {}", server_uuid);
+        // Call the service to get the VMs for the specified server
+        let vms = vmapi_service.list_vms_by_server(server_uuid).await?;
+        return Ok(HttpResponse::Ok().json(vms));
+    }
+    
+    // Call the service to get all VMs
     let vms = vmapi_service.list_vms().await?;
     
     // Return the VMs as JSON
