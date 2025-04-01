@@ -5,6 +5,7 @@ import './App.css';
 import { AuthProvider, useAuth } from './services/AuthContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
 import VMsList from './pages/VMs';
 import ServersList from './pages/Servers';
 import NetworksList from './pages/Networks';
@@ -38,7 +39,7 @@ function App() {
               <Layout />
             </ProtectedRoute>
           }>
-            <Route index element={<VMsList />} />
+            <Route index element={<Dashboard />} />
             <Route path="vms" element={<VMsList />} />
             <Route path="servers" element={<ServersList />} />
             <Route path="networks" element={<NetworksList />} />

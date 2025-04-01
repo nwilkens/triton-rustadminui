@@ -101,3 +101,8 @@ export const getImages = async () => {
 export const getPackages = async () => {
   return apiClient.get('/packages');
 };
+
+// Dashboard
+export const getDashboardStats = async () => {
+  return apiClient.get('/dashboard');
+};

@@ -11,6 +11,7 @@ pub mod platforms;
 pub mod servers;
 pub mod networks;
 pub mod ping;
+pub mod dashboard;
 
 pub fn configure_routes(cfg: &mut web::ServiceConfig, jwt_secret: &str) {
     info!("Configuring API routes with authentication middleware");
@@ -114,6 +115,12 @@ pub fn configure_routes(cfg: &mut web::ServiceConfig, jwt_secret: &str) {
                                     .service(networks::update_network)
                                     .service(networks::delete_network)
                             )
+                    )
+                    
+                    // Dashboard endpoint
+                    .service(
+                        web::scope("/dashboard")
+                            .service(dashboard::get_dashboard_stats)
                     )
             )
     );
