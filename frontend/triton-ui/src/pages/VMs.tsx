@@ -53,12 +53,65 @@ interface Image {
   os: string;
 }
 
+// Filter interface for VM filtering
+interface VMFilters {
+  alias: string;
+  state: string;
+  server: string;
+  brand: string;
+  image: string;
+}
+
 const VMsList = () => {
   const [vms, setVMs] = useState<VM[]>([]);
+  const [filteredVMs, setFilteredVMs] = useState<VM[]>([]);
   const [servers, setServers] = useState<Record<string, Server>>({});
   const [images, setImages] = useState<Record<string, Image>>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [filters, setFilters] = useState<VMFilters>({
+    alias: '',
+    state: '',
+    server: '',
+    brand: '',
+    image: '',
+  });
+
+  // Apply filters to VMs
+  useEffect(() => {
+    if (!vms.length) return;
+    
+    const filtered = vms.filter(vm => {
+      // Filter by alias (case insensitive)
+      if (filters.alias && !vm.alias.toLowerCase().includes(filters.alias.toLowerCase())) {
+        return false;
+      }
+      
+      // Filter by state
+      if (filters.state && vm.state !== filters.state) {
+        return false;
+      }
+      
+      // Filter by server (hostname)
+      if (filters.server && servers[vm.server_uuid || '']?.hostname !== filters.server) {
+        return false;
+      }
+      
+      // Filter by brand
+      if (filters.brand && vm.brand !== filters.brand) {
+        return false;
+      }
+      
+      // Filter by image
+      if (filters.image && !vm.image_uuid?.includes(filters.image)) {
+        return false;
+      }
+      
+      return true;
+    });
+    
+    setFilteredVMs(filtered);
+  }, [vms, filters, servers, images]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -72,7 +125,9 @@ const VMsList = () => {
           getImages()
         ]);
         
-        setVMs(vmsResponse.data);
+        const fetchedVMs = vmsResponse.data;
+        setVMs(fetchedVMs);
+        setFilteredVMs(fetchedVMs);
         
         // Convert servers array to a map for quick lookups
         const serversMap: Record<string, Server> = {};
@@ -277,6 +332,44 @@ const VMsList = () => {
     );
   }
 
+  // Extract unique values for filters
+  const getUniqueStates = () => {
+    const states = vms.map(vm => vm.state);
+    return Array.from(new Set(states));
+  };
+  
+  const getUniqueBrands = () => {
+    const brands = vms.map(vm => vm.brand);
+    return Array.from(new Set(brands));
+  };
+  
+  const getUniqueServerNames = () => {
+    const serverNames = vms
+      .map(vm => servers[vm.server_uuid || '']?.hostname)
+      .filter(Boolean) as string[];
+    return Array.from(new Set(serverNames));
+  };
+  
+  // Handler for filter changes
+  const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFilters(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+  
+  // Clear all filters
+  const handleClearFilters = () => {
+    setFilters({
+      alias: '',
+      state: '',
+      server: '',
+      brand: '',
+      image: '',
+    });
+  };
+
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-8">
       <div className="sm:flex sm:items-center">
@@ -293,6 +386,100 @@ const VMsList = () => {
           >
             Create VM
           </button>
+        </div>
+      </div>
+      
+      {/* Filters */}
+      <div className="bg-white shadow rounded-lg p-4 mt-6">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex-1 min-w-[200px]">
+            <label htmlFor="aliasFilter" className="block text-sm font-medium text-gray-700">Name</label>
+            <input
+              type="text"
+              id="aliasFilter"
+              name="alias"
+              value={filters.alias}
+              onChange={handleFilterChange}
+              className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              placeholder="Filter by name"
+            />
+          </div>
+          
+          <div className="flex-1 min-w-[200px]">
+            <label htmlFor="stateFilter" className="block text-sm font-medium text-gray-700">State</label>
+            <select
+              id="stateFilter"
+              name="state"
+              value={filters.state}
+              onChange={handleFilterChange}
+              className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            >
+              <option value="">All States</option>
+              {getUniqueStates().map(state => (
+                <option key={state} value={state}>{state}</option>
+              ))}
+            </select>
+          </div>
+          
+          <div className="flex-1 min-w-[200px]">
+            <label htmlFor="brandFilter" className="block text-sm font-medium text-gray-700">Brand</label>
+            <select
+              id="brandFilter"
+              name="brand"
+              value={filters.brand}
+              onChange={handleFilterChange}
+              className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            >
+              <option value="">All Brands</option>
+              {getUniqueBrands().map(brand => (
+                <option key={brand} value={brand}>{brand}</option>
+              ))}
+            </select>
+          </div>
+          
+          <div className="flex-1 min-w-[200px]">
+            <label htmlFor="serverFilter" className="block text-sm font-medium text-gray-700">Server</label>
+            <select
+              id="serverFilter"
+              name="server"
+              value={filters.server}
+              onChange={handleFilterChange}
+              className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            >
+              <option value="">All Servers</option>
+              {getUniqueServerNames().map(server => (
+                <option key={server} value={server}>{server}</option>
+              ))}
+            </select>
+          </div>
+          
+          <div className="flex-1 min-w-[200px]">
+            <label htmlFor="imageFilter" className="block text-sm font-medium text-gray-700">Image</label>
+            <input
+              type="text"
+              id="imageFilter"
+              name="image"
+              value={filters.image}
+              onChange={handleFilterChange}
+              className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              placeholder="Filter by image ID"
+            />
+          </div>
+          
+          <div className="flex items-end pt-4">
+            <button
+              type="button"
+              onClick={handleClearFilters}
+              className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              Clear Filters
+            </button>
+          </div>
+        </div>
+        
+        {/* Filter stats */}
+        <div className="mt-4 text-sm text-gray-500">
+          Showing {filteredVMs.length} of {vms.length} VMs
         </div>
       </div>
 
@@ -327,14 +514,22 @@ const VMsList = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
-                  {vms.length === 0 ? (
+                  {loading ? (
                     <tr>
                       <td colSpan={7} className="py-4 px-6 text-center text-sm text-gray-500">
-                        No virtual machines found
+                        <div className="flex justify-center">
+                          <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-indigo-500"></div>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : filteredVMs.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-4 px-6 text-center text-sm text-gray-500">
+                        {vms.length > 0 ? 'No matching virtual machines found. Try adjusting your filters.' : 'No virtual machines found'}
                       </td>
                     </tr>
                   ) : (
-                    vms.map((vm) => {
+                    filteredVMs.map((vm) => {
                       const serverDetails = getServerDetails(vm.server_uuid);
                       return (
                         <tr key={vm.uuid} className="hover:bg-gray-50">

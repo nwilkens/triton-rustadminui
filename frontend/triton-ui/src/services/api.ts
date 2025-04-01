@@ -61,6 +61,21 @@ export const getVM = async (id: string) => {
   return apiClient.get(`/vms/${id}`);
 };
 
+export const getVMSnapshots = async (id: string) => {
+  // This will be implemented in the backend later
+  return Promise.resolve({ data: [] }); 
+};
+
+export const getVMJobs = async (id: string) => {
+  // This will be implemented in the backend later
+  return Promise.resolve({ data: [] });
+};
+
+export const getVMFirewallRules = async (id: string) => {
+  // This will be implemented in the backend later
+  return Promise.resolve({ data: [] });
+};
+
 export const createVM = async (vmData: any) => {
   return apiClient.post('/vms', vmData);
 };
