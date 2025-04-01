@@ -7,17 +7,29 @@ interface VM {
   alias: string;
   state: string;
   brand: string;
-  memory: number;
-  quota?: number;
-  disk: number;
-  vcpus: number;
+  // In VMAPI, memory is stored as "ram" field in MB
+  ram?: number;
+  memory?: number; // For backward compatibility
+  quota?: number;  // For zones, disk quota in GB
+  disk?: number;   // For KVM VMs, disk size
+  vcpus?: number;
   owner_uuid: string;
   ips?: string[];
-  nics?: any[];
+  nics?: {
+    interface?: string;
+    mac?: string;
+    ip?: string;
+    ips?: string[];
+    primary?: boolean;
+    netmask?: string;
+    network_uuid?: string;
+  }[];
   image_uuid?: string;
-  package_uuid?: string;
+  billing_id?: string; // Package UUID in VMAPI
+  package_uuid?: string; // For backward compatibility
   server_uuid?: string;
-  created_at?: string;
+  create_timestamp?: string; // VMAPI uses this
+  created_at?: string;      // For backward compatibility
   tags?: any;
   customer_metadata?: any;
   internal_metadata?: any;
@@ -25,6 +37,7 @@ interface VM {
   cpu_shares?: number;
   dns_domain?: string;
   autoboot?: boolean;
+  max_physical_memory?: number; // Also sometimes used for RAM
 }
 
 interface Server {
@@ -86,16 +99,46 @@ const VMsList = () => {
     fetchData();
   }, []);
 
-  const formatMemory = (bytes: number): string => {
-    const gb = bytes / (1024 * 1024 * 1024);
-    return `${gb.toFixed(1)} GB`;
+  const formatMemory = (vm: VM): string => {
+    // RAM is typically defined in MB in VMAPI via the ram field
+    if (vm.ram) {
+      const gb = vm.ram / 1024;
+      return `${gb.toFixed(1)} GB`;
+    }
+    
+    // For backward compatibility, check max_physical_memory (also in MB)
+    if (vm.max_physical_memory) {
+      const gb = vm.max_physical_memory / 1024;
+      return `${gb.toFixed(1)} GB`;
+    }
+    
+    // If memory field is available (bytes), convert from bytes
+    if (vm.memory) {
+      const gb = vm.memory / (1024 * 1024 * 1024);
+      return `${gb.toFixed(1)} GB`;
+    }
+    
+    return "N/A";
   };
 
   const formatDisk = (vm: VM): string => {
-    // Use quota field if available (for zones), otherwise use disk field
-    const diskBytes = vm.quota ? vm.quota : vm.disk;
-    const gb = diskBytes / (1024 * 1024 * 1024);
-    return `${gb.toFixed(0)} GB`;
+    // For zones, quota is in GB
+    if (vm.quota) {
+      return `${vm.quota} GB`;
+    }
+    
+    // For KVM VMs, disk is in GB or bytes
+    if (vm.disk) {
+      // If disk value is very large, assume it's in bytes and convert to GB
+      if (vm.disk > 1000) {
+        const gb = vm.disk / (1024 * 1024 * 1024);
+        return `${gb.toFixed(0)} GB`;
+      }
+      // Otherwise assume it's already in GB
+      return `${vm.disk} GB`;
+    }
+    
+    return "N/A";
   };
   
   const calculateVCPUs = (vm: VM): number => {
@@ -109,21 +152,73 @@ const VMsList = () => {
     return 1;
   };
   
-  const getIPAddress = (vm: VM): string => {
-    // If IPs array is directly available, use the first IP
-    if (vm.ips && vm.ips.length > 0) return vm.ips[0];
+  const getIPAddresses = (vm: VM): string[] => {
+    const ips: string[] = [];
     
-    // Otherwise, try to extract IP from nics array
-    if (vm.nics && vm.nics.length > 0) {
-      // Look for primary NIC first
-      const primaryNic = vm.nics.find(nic => nic.primary === true);
-      if (primaryNic && primaryNic.ip) return primaryNic.ip;
-      
-      // If no primary NIC found, use the first NIC
-      if (vm.nics[0].ip) return vm.nics[0].ip;
+    // Debug: Log the VM and its nics to console
+    console.log('VM', vm.uuid, vm.alias, 'nics:', vm.nics);
+    
+    // If IPs array is directly available, use it
+    if (vm.ips && vm.ips.length > 0) {
+      ips.push(...vm.ips);
     }
     
-    return "N/A";
+    // Extract IPs from nics array - handling both array and object formats
+    if (vm.nics) {
+      // Check if nics is an array
+      if (Array.isArray(vm.nics)) {
+        for (const nic of vm.nics) {
+          // Add IP from ip field
+          if (nic && typeof nic === 'object' && nic.ip) {
+            ips.push(nic.ip);
+          }
+          
+          // Add IPs from ips array on the nic (typically includes CIDR notation)
+          if (nic && typeof nic === 'object' && nic.ips && Array.isArray(nic.ips)) {
+            // Strip CIDR notation if present
+            const cleanIps = nic.ips.map((ip: string) => 
+              typeof ip === 'string' ? ip.split('/')[0] : ip
+            );
+            ips.push(...cleanIps);
+          }
+        }
+      } 
+      // Handle the case where nics is an object with numeric keys (old format)
+      else if (typeof vm.nics === 'object') {
+        Object.keys(vm.nics || {}).forEach(key => {
+          const nicsObject = vm.nics as Record<string, any>;
+          const nic = nicsObject[key];
+          if (nic && typeof nic === 'object' && nic.ip) {
+            ips.push(nic.ip);
+          }
+          
+          if (nic && typeof nic === 'object' && nic.ips && Array.isArray(nic.ips)) {
+            const cleanIps = nic.ips.map((ip: string) => 
+              typeof ip === 'string' ? ip.split('/')[0] : ip
+            );
+            ips.push(...cleanIps);
+          }
+        });
+      }
+    }
+    
+    console.log('Extracted IPs:', ips);
+    
+    // Deduplicate IPs and filter out undefined/null values
+    return Array.from(new Set(ips)).filter(ip => ip);
+  };
+  
+  const formatIPAddresses = (vm: VM): string => {
+    const ips = getIPAddresses(vm);
+    
+    if (ips.length === 0) {
+      return "N/A";
+    } else if (ips.length === 1) {
+      return ips[0];
+    } else {
+      // If there are multiple, show first + count
+      return `${ips[0]} +${ips.length - 1} more`;
+    }
   };
   
   const getImageDetails = (imageUuid: string | undefined): string => {
@@ -277,7 +372,7 @@ const VMsList = () => {
                             )}
                           </td>
                           <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                            {getIPAddress(vm)}
+                            {formatIPAddresses(vm)}
                           </td>
                           <td className="whitespace-nowrap px-3 py-4 text-sm">
                             <div className="flex flex-col space-y-1">
@@ -285,7 +380,7 @@ const VMsList = () => {
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2z" />
                                 </svg>
-                                <span className="text-gray-900">{formatMemory(vm.memory)}</span>
+                                <span className="text-gray-900">{formatMemory(vm)}</span>
                               </div>
                               <div className="flex items-center">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
