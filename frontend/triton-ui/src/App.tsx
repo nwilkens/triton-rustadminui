@@ -11,10 +11,12 @@ import ServersList from './pages/Servers';
 import NetworksList from './pages/Networks';
 import ImagesList from './pages/Images';
 import PackagesList from './pages/Packages';
+import JobsList from './pages/Jobs';
 
 // Lazy load components
 const VMDetail = React.lazy(() => import('./pages/VMDetail'));
 const ServerDetail = React.lazy(() => import('./pages/ServerDetail'));
+const JobDetail = React.lazy(() => import('./pages/JobDetail'));
 
 // Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -63,6 +65,14 @@ function App() {
             <Route path="networks" element={<NetworksList />} />
             <Route path="images" element={<ImagesList />} />
             <Route path="packages" element={<PackagesList />} />
+            <Route path="jobs">
+              <Route index element={<JobsList />} />
+              <Route path=":uuid" element={
+                <Suspense fallback={<div className="py-6 px-4 text-center">Loading job details...</div>}>
+                  <JobDetail />
+                </Suspense>
+              } />
+            </Route>
             {/* Route for users to be added later */}
           </Route>
         </Routes>

@@ -71,8 +71,7 @@ export const getVMSnapshots = async (id: string) => {
 };
 
 export const getVMJobs = async (id: string) => {
-  // This will be implemented in the backend later
-  return Promise.resolve({ data: [] });
+  return apiClient.get(`/vms/${id}/jobs`);
 };
 
 export const getVMFirewallRules = async (id: string) => {
@@ -132,4 +131,17 @@ export const getPackages = async () => {
 // Dashboard
 export const getDashboardStats = async () => {
   return apiClient.get('/dashboard');
+};
+
+// Jobs
+export const getJobs = async (params?: any) => {
+  return apiClient.get('/jobs', { params });
+};
+
+export const getJob = async (id: string) => {
+  return apiClient.get(`/jobs/${id}`);
+};
+
+export const getJobOutput = async (id: string) => {
+  return apiClient.get(`/jobs/${id}/output`);
 };

@@ -700,8 +700,8 @@ const VMDetail = () => {
             {/* Recent Jobs Section */}
             <div className="lg:col-span-2">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-medium text-gray-900">Recent Activity</h3>
-                <button className="text-sm text-indigo-600 hover:text-indigo-900">View All Jobs</button>
+                <h3 className="text-lg font-medium text-gray-900">Recent Jobs</h3>
+                <Link to="/jobs" className="text-sm text-indigo-600 hover:text-indigo-900">View All Jobs</Link>
               </div>
               <div className="bg-gray-50 shadow-sm rounded-lg overflow-hidden">
                 {jobs.length > 0 ? (
@@ -723,15 +723,19 @@ const VMDetail = () => {
                               <div className="text-xs text-gray-500 mt-1 font-mono">{job.uuid}</div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                job.status === 'succeeded' ? 'bg-green-100 text-green-800' : 
-                                job.status === 'failed' ? 'bg-red-100 text-red-800' : 
-                                'bg-yellow-100 text-yellow-800'
+                              <Link to={`/jobs/${job.uuid}`} className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                job.execution === 'succeeded' ? 'bg-green-100 text-green-800' : 
+                                job.execution === 'failed' ? 'bg-red-100 text-red-800' : 
+                                job.execution === 'running' ? 'bg-blue-100 text-blue-800' : 
+                                job.execution === 'queued' ? 'bg-yellow-100 text-yellow-800' : 
+                                'bg-gray-100 text-gray-800'
                               }`}>
-                                {job.status === 'succeeded' ? 'Success' : 
-                                 job.status === 'failed' ? 'Failed' : 
-                                 'Running'}
-                              </span>
+                                {job.execution === 'succeeded' ? 'Succeeded' : 
+                                 job.execution === 'failed' ? 'Failed' : 
+                                 job.execution === 'running' ? 'Running' :
+                                 job.execution === 'queued' ? 'Queued' :
+                                 job.execution}
+                              </Link>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               {formatDate(job.created_at)}

@@ -56,6 +56,7 @@ interface Image {
 // Filter interface for VM filtering
 interface VMFilters {
   alias: string;
+  uuid: string;
   state: string;
   server: string;
   brand: string;
@@ -71,6 +72,7 @@ const VMsList = () => {
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<VMFilters>({
     alias: '',
+    uuid: '',
     state: '',
     server: '',
     brand: '',
@@ -84,6 +86,11 @@ const VMsList = () => {
     const filtered = vms.filter(vm => {
       // Filter by alias (case insensitive)
       if (filters.alias && !vm.alias.toLowerCase().includes(filters.alias.toLowerCase())) {
+        return false;
+      }
+      
+      // Filter by UUID
+      if (filters.uuid && !vm.uuid.toLowerCase().includes(filters.uuid.toLowerCase())) {
         return false;
       }
       
@@ -421,6 +428,7 @@ const VMsList = () => {
   const handleClearFilters = () => {
     setFilters({
       alias: '',
+      uuid: '',
       state: '',
       server: '',
       brand: '',
@@ -460,6 +468,19 @@ const VMsList = () => {
               onChange={handleFilterChange}
               className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               placeholder="Filter by name"
+            />
+          </div>
+          
+          <div className="flex-1 min-w-[200px]">
+            <label htmlFor="uuidFilter" className="block text-sm font-medium text-gray-700">UUID</label>
+            <input
+              type="text"
+              id="uuidFilter"
+              name="uuid"
+              value={filters.uuid}
+              onChange={handleFilterChange}
+              className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              placeholder="Filter by UUID"
             />
           </div>
           
@@ -602,8 +623,8 @@ const VMsList = () => {
                                 <div className="flex items-center text-xs text-gray-500 mt-0.5">
                                   <span>{vm.brand}</span>
                                   {vm.uuid && (
-                                    <span className="ml-1 text-gray-400 font-mono text-2xs truncate max-w-[120px]" title={vm.uuid}>
-                                      ({vm.uuid.substring(0, 8)}...)
+                                    <span className="ml-1 text-gray-400 font-mono text-2xs" title={vm.uuid}>
+                                      ({vm.uuid})
                                     </span>
                                   )}
                                 </div>

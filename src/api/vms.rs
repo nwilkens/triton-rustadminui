@@ -294,3 +294,44 @@ pub async fn vm_action(
         },
     }
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ChainResult {
+    pub result: String,
+    pub error: String,
+    pub name: String,
+    pub started_at: Option<String>,
+    pub finished_at: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct VmJob {
+    pub uuid: String,
+    pub name: String,
+    pub execution: String,
+    pub params: Option<serde_json::Value>,
+    pub exec_after: Option<String>,
+    pub created_at: String,
+    pub timeout: Option<u32>,
+    pub chain_results: Option<Vec<ChainResult>>,
+    pub elapsed: Option<String>,
+}
+
+#[get("/{uuid}/jobs")]
+pub async fn get_vm_jobs(
+    _user: AuthenticatedUser,
+    config: Data<Config>,
+    path: Path<String>,
+) -> Result<HttpResponse, AppError> {
+    let uuid = path.into_inner();
+    
+    // Create an instance of the VMAPI service
+    info!("Getting jobs for VM {} using VMAPI service", uuid);
+    let vmapi_service = VmapiService::new(config.vmapi_url.clone());
+    
+    // Call the service to get the VM jobs
+    let jobs = vmapi_service.get_vm_jobs(&uuid).await?;
+    
+    // Return the jobs as JSON
+    Ok(HttpResponse::Ok().json(jobs))
+}

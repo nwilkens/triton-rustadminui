@@ -12,6 +12,7 @@ import {
   PhotographIcon as PhotoIcon,
   CubeIcon,
   GlobeAltIcon,
+  ClockIcon,
 } from '@heroicons/react/outline';
 import { ChevronDownIcon } from '@heroicons/react/solid';
 
@@ -36,6 +37,7 @@ export default function Layout() {
     { name: 'Networks', href: '/networks', icon: GlobeAltIcon, current: false },
     { name: 'Images', href: '/images', icon: PhotoIcon, current: false },
     { name: 'Packages', href: '/packages', icon: CubeIcon, current: false },
+    { name: 'Jobs', href: '/jobs', icon: ClockIcon, current: false },
     { name: 'Users', href: '/users', icon: UsersIcon, current: false },
   ];
 

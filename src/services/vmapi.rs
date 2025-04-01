@@ -505,4 +505,173 @@ impl VmapiService {
             Ok(format!("Action '{}' completed successfully", action))
         }
     }
+    
+    pub async fn get_vm_jobs(&self, vm_uuid: &str) -> Result<Vec<crate::api::vms::VmJob>, AppError> {
+        info!("Fetching jobs for VM: {}", vm_uuid);
+        
+        // Construct the URL for the VMAPI jobs endpoint with vm_uuid filter
+        let jobs_url = format!("{}/jobs?vm_uuid={}", self.base_url, vm_uuid);
+        
+        // Make the request to VMAPI
+        let response = self.client
+            .get(&jobs_url)
+            .send()
+            .await
+            .map_err(|e| AppError::InternalServerError(format!("Failed to fetch jobs from VMAPI: {}", e)))?;
+            
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(AppError::InternalServerError(format!("Failed to fetch jobs from VMAPI: {} - {}", status, error_text)));
+        }
+        
+        // Try to parse the response directly into our VmJob struct
+        let jobs = response
+            .json::<Vec<crate::api::vms::VmJob>>()
+            .await
+            .map_err(|e| {
+                info!("Error parsing VMAPI jobs response directly: {}", e);
+                AppError::InternalServerError(format!("Failed to parse VMAPI jobs response: {}", e))
+            })?;
+        
+        info!("Successfully fetched {} jobs for VM {}", jobs.len(), vm_uuid);
+        Ok(jobs)
+    }
+    
+    pub async fn list_jobs(
+        &self,
+        vm_uuid: Option<&str>,
+        execution: Option<&str>,
+        name: Option<&str>,
+        limit: Option<u32>,
+        offset: Option<u32>,
+    ) -> Result<Vec<crate::api::jobs::Job>, AppError> {
+        info!("Listing jobs with filters: vm_uuid={:?}, execution={:?}, name={:?}", 
+              vm_uuid, execution, name);
+        
+        // Construct the base URL for the VMAPI jobs endpoint
+        let mut jobs_url = format!("{}/jobs", self.base_url);
+        
+        // Add filters as query parameters
+        let mut query_params = Vec::new();
+        
+        if let Some(vm_uuid) = vm_uuid {
+            query_params.push(format!("vm_uuid={}", vm_uuid));
+        }
+        
+        if let Some(execution) = execution {
+            query_params.push(format!("execution={}", execution));
+        }
+        
+        if let Some(name) = name {
+            query_params.push(format!("name={}", name));
+        }
+        
+        if let Some(limit) = limit {
+            query_params.push(format!("limit={}", limit));
+        }
+        
+        if let Some(offset) = offset {
+            query_params.push(format!("offset={}", offset));
+        }
+        
+        // Add the query parameters to the URL
+        if !query_params.is_empty() {
+            jobs_url = format!("{}?{}", jobs_url, query_params.join("&"));
+        }
+        
+        // Make the request to VMAPI
+        let response = self.client
+            .get(&jobs_url)
+            .send()
+            .await
+            .map_err(|e| AppError::InternalServerError(format!("Failed to fetch jobs from VMAPI: {}", e)))?;
+            
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(AppError::InternalServerError(format!("Failed to fetch jobs from VMAPI: {} - {}", status, error_text)));
+        }
+        
+        // Parse the response JSON
+        let jobs = response
+            .json::<Vec<crate::api::jobs::Job>>()
+            .await
+            .map_err(|e| {
+                info!("Error parsing VMAPI jobs response: {}", e);
+                AppError::InternalServerError(format!("Failed to parse VMAPI jobs response: {}", e))
+            })?;
+            
+        info!("Successfully fetched {} jobs from VMAPI", jobs.len());
+        Ok(jobs)
+    }
+    
+    pub async fn get_job(&self, uuid: &str) -> Result<crate::api::jobs::Job, AppError> {
+        info!("Getting job {}", uuid);
+        
+        // Construct the URL for the VMAPI job endpoint
+        let job_url = format!("{}/jobs/{}", self.base_url, uuid);
+        
+        // Make the request to VMAPI
+        let response = self.client
+            .get(&job_url)
+            .send()
+            .await
+            .map_err(|e| AppError::InternalServerError(format!("Failed to fetch job from VMAPI: {}", e)))?;
+            
+        if response.status().is_client_error() {
+            return Err(AppError::NotFound(format!("Job with UUID {} not found", uuid)));
+        }
+        
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(AppError::InternalServerError(format!("Failed to fetch job from VMAPI: {} - {}", status, error_text)));
+        }
+        
+        // Parse the response JSON
+        let job = response
+            .json::<crate::api::jobs::Job>()
+            .await
+            .map_err(|e| {
+                info!("Error parsing VMAPI job response: {}", e);
+                AppError::InternalServerError(format!("Failed to parse VMAPI job response: {}", e))
+            })?;
+            
+        info!("Successfully fetched job {}", uuid);
+        Ok(job)
+    }
+    
+    pub async fn get_job_output(&self, uuid: &str) -> Result<String, AppError> {
+        info!("Getting job output for {}", uuid);
+        
+        // Construct the URL for the VMAPI job output endpoint
+        let job_output_url = format!("{}/jobs/{}/output", self.base_url, uuid);
+        
+        // Make the request to VMAPI
+        let response = self.client
+            .get(&job_output_url)
+            .send()
+            .await
+            .map_err(|e| AppError::InternalServerError(format!("Failed to fetch job output from VMAPI: {}", e)))?;
+            
+        if response.status().is_client_error() {
+            return Err(AppError::NotFound(format!("Output for job with UUID {} not found", uuid)));
+        }
+        
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(AppError::InternalServerError(format!("Failed to fetch job output from VMAPI: {} - {}", status, error_text)));
+        }
+        
+        // Get the text response (job output is plain text)
+        let output = response
+            .text()
+            .await
+            .map_err(|e| AppError::InternalServerError(format!("Failed to read job output text: {}", e)))?;
+            
+        info!("Successfully fetched output for job {}", uuid);
+        Ok(output)
+    }
 }

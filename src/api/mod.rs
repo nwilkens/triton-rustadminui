@@ -10,6 +10,7 @@ pub mod images;
 pub mod platforms;
 pub mod servers;
 pub mod networks;
+pub mod jobs;
 pub mod ping;
 pub mod dashboard;
 
@@ -42,6 +43,7 @@ pub fn configure_routes(cfg: &mut web::ServiceConfig, jwt_secret: &str) {
                                     .service(vms::update_vm)
                                     .service(vms::delete_vm)
                                     .service(vms::vm_action)
+                                    .service(vms::get_vm_jobs)
                             )
                     )
                     
@@ -115,6 +117,14 @@ pub fn configure_routes(cfg: &mut web::ServiceConfig, jwt_secret: &str) {
                                     .service(networks::update_network)
                                     .service(networks::delete_network)
                             )
+                    )
+                    
+                    // Jobs endpoints
+                    .service(
+                        web::scope("/jobs")
+                            .service(jobs::list_jobs)
+                            .service(jobs::get_job)
+                            .service(jobs::get_job_output)
                     )
                     
                     // Dashboard endpoint
