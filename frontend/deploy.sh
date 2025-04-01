@@ -30,7 +30,7 @@ npm run build
 
 # Generate a build timestamp file
 BUILD_TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S")
-BUILD_VERSION=$(grep -m 1 '"version":' package.json | awk -F: '{ print $2 }' | sed 's/[",]//g' | tr -d ' ')
+BUILD_VERSION=$(grep '"version":' package.json | head -1 | awk -F: '{ print $2 }' | sed 's/[",]//g' | tr -d ' ')
 echo "{\"buildTime\":\"$BUILD_TIMESTAMP\",\"version\":\"$BUILD_VERSION\"}" > build/build-info.json
 
 # Move back to original directory

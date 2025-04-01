@@ -2,6 +2,20 @@ import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { getServer, getVMsByServer } from '../services/api';
 
+interface ServerMetrics {
+  cpu_utilization?: number;
+  network_throughput?: {
+    rx_bytes_sec?: number;
+    tx_bytes_sec?: number;
+  };
+  disk_io?: {
+    read_bytes_sec?: number;
+    write_bytes_sec?: number;
+    iops?: number;
+  };
+  // Add more metrics as needed
+}
+
 interface Server {
   uuid: string;
   hostname: string;
@@ -10,10 +24,18 @@ interface Server {
   ram?: number;
   memory_total_bytes?: number;
   memory_available_bytes?: number;
+  memory_utilized_bytes?: number;
+  memory_utilization_percent?: number;
   disk_total_bytes?: number;
   disk_available_bytes?: number;
+  disk_utilized_bytes?: number;
+  disk_utilization_percent?: number;
   cpu_type?: string;
   cpu_cores?: number;
+  cpu_sockets?: number;
+  cpu_threads_per_core?: number;
+  cpu_speed_mhz?: number;
+  cpu_virtualization?: boolean;
   headnode?: boolean;
   setup?: boolean;
   setting_up?: boolean;
@@ -32,12 +54,23 @@ interface Server {
   boot_params?: Record<string, any>;
   kernel_flags?: Record<string, any>;
   rack_identifier?: string;
+  network_interfaces?: {
+    name: string;
+    mac: string;
+    ip: string;
+    netmask: string;
+    link_status: string;
+    speed: string;
+    type: string;
+    mtu?: number;
+  }[];
   sysinfo?: {
     'Live Image'?: string;
     Manufacturer?: string;
     'Product'?: string;
     [key: string]: any;
   };
+  metrics?: ServerMetrics;
 }
 
 interface VM {
@@ -87,6 +120,36 @@ const ServerDetail = () => {
   const [vmsError, setVMsError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
 
+  // Simulate real-time metrics for development
+  const simulateMetrics = (server: Server | null): ServerMetrics => {
+    if (!server) return {};
+    
+    // Generate random CPU utilization between 10-70%
+    const cpu_utilization = Math.floor(Math.random() * 60) + 10;
+    
+    // Generate network throughput - simulate realistic values
+    const rx_bytes_sec = Math.floor(Math.random() * 50) * 1024 * 1024; // 0-50 MB/s
+    const tx_bytes_sec = Math.floor(Math.random() * 40) * 1024 * 1024; // 0-40 MB/s
+    
+    // Generate disk I/O - simulate realistic values
+    const read_bytes_sec = Math.floor(Math.random() * 100) * 1024 * 1024; // 0-100 MB/s
+    const write_bytes_sec = Math.floor(Math.random() * 80) * 1024 * 1024; // 0-80 MB/s
+    const iops = Math.floor(Math.random() * 2000) + 500; // 500-2500 IOPS
+    
+    return {
+      cpu_utilization,
+      network_throughput: {
+        rx_bytes_sec,
+        tx_bytes_sec
+      },
+      disk_io: {
+        read_bytes_sec,
+        write_bytes_sec,
+        iops
+      }
+    };
+  };
+  
   useEffect(() => {
     const fetchData = async () => {
       if (!uuid) return;
@@ -94,7 +157,95 @@ const ServerDetail = () => {
       try {
         setLoading(true);
         const serverResponse = await getServer(uuid);
-        const serverData = serverResponse.data;
+        let serverData = serverResponse.data;
+        
+        // Add computed fields for UI display
+        if (serverData.memory_total_bytes && serverData.memory_available_bytes) {
+          serverData.memory_utilized_bytes = serverData.memory_total_bytes - serverData.memory_available_bytes;
+          serverData.memory_utilization_percent = (serverData.memory_utilized_bytes / serverData.memory_total_bytes) * 100;
+        }
+        
+        if (serverData.disk_total_bytes && serverData.disk_available_bytes) {
+          serverData.disk_utilized_bytes = serverData.disk_total_bytes - serverData.disk_available_bytes;
+          serverData.disk_utilization_percent = (serverData.disk_utilized_bytes / serverData.disk_total_bytes) * 100;
+        }
+        
+        // Extract CPU info from sysinfo if available
+        if (serverData.sysinfo) {
+          // Map common sysinfo fields to our server model
+          if (serverData.sysinfo['CPU Cores Per Socket']) {
+            serverData.cpu_cores = parseInt(serverData.sysinfo['CPU Cores Per Socket']);
+          }
+          
+          if (serverData.sysinfo['CPU Physical Cores']) {
+            serverData.cpu_cores = parseInt(serverData.sysinfo['CPU Physical Cores']);
+          }
+          
+          if (serverData.sysinfo['CPU Sockets']) {
+            serverData.cpu_sockets = parseInt(serverData.sysinfo['CPU Sockets']);
+          }
+          
+          if (serverData.sysinfo['CPU Threads Per Core']) {
+            serverData.cpu_threads_per_core = parseInt(serverData.sysinfo['CPU Threads Per Core']);
+          }
+          
+          if (serverData.sysinfo['CPU Clock Rate']) {
+            const cpuClockRate = serverData.sysinfo['CPU Clock Rate'];
+            if (typeof cpuClockRate === 'string' && cpuClockRate.includes('MHz')) {
+              serverData.cpu_speed_mhz = parseInt(cpuClockRate.replace('MHz', '').trim());
+            }
+          }
+        }
+        
+        // Add simulated metrics for development
+        serverData.metrics = simulateMetrics(serverData);
+        
+        // Add simulated network interfaces for development
+        if (!serverData.network_interfaces) {
+          serverData.network_interfaces = [
+            {
+              name: 'net0',
+              mac: '00:50:56:01:02:03',
+              ip: '10.88.88.10',
+              netmask: '255.255.255.0',
+              link_status: 'up',
+              speed: '10 Gbps',
+              type: 'external',
+              mtu: 1500
+            },
+            {
+              name: 'net1',
+              mac: '00:50:56:03:04:05',
+              ip: '192.168.1.10',
+              netmask: '255.255.255.0',
+              link_status: 'up',
+              speed: '10 Gbps',
+              type: 'internal',
+              mtu: 1500
+            },
+            {
+              name: 'admin0',
+              mac: '00:50:56:aa:bb:cc',
+              ip: '172.16.0.10',
+              netmask: '255.255.0.0',
+              link_status: 'up',
+              speed: '1 Gbps',
+              type: 'admin',
+              mtu: 1500
+            },
+            {
+              name: 'storage0',
+              mac: '00:50:56:dd:ee:ff',
+              ip: '10.100.0.10',
+              netmask: '255.255.0.0',
+              link_status: 'up',
+              speed: '25 Gbps',
+              type: 'storage',
+              mtu: 9000
+            }
+          ];
+        }
+        
         setServer(serverData);
         setError(null);
       } catch (err: any) {
@@ -105,6 +256,21 @@ const ServerDetail = () => {
     };
 
     fetchData();
+    
+    // Setup interval to update metrics every 5 seconds
+    const metricsInterval = setInterval(() => {
+      if (server) {
+        setServer(prevServer => {
+          if (!prevServer) return null;
+          return {
+            ...prevServer,
+            metrics: simulateMetrics(prevServer)
+          };
+        });
+      }
+    }, 5000);
+    
+    return () => clearInterval(metricsInterval);
   }, [uuid]);
   
   useEffect(() => {
@@ -126,17 +292,45 @@ const ServerDetail = () => {
     fetchVMs();
   }, [uuid]);
 
+  // Utility function to format bytes to human readable format
+  const formatBytes = (bytes?: number, decimals: number = 1): string => {
+    if (!bytes || bytes === 0) return 'N/A';
+    
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+    
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+  };
+  
+  // Format memory (RAM) in GB
   const formatMemory = (ram?: number): string => {
     if (!ram) return 'N/A';
     const gb = ram / 1024;
     return `${gb.toFixed(1)} GB`;
   };
-
+  
+  // Format disk space in GB or TB
+  const formatDiskSpace = (bytes?: number): string => {
+    if (!bytes) return 'N/A';
+    return formatBytes(bytes, 2);
+  };
+  
+  // Format data rate (bytes/sec)
+  const formatDataRate = (bytesPerSec?: number): string => {
+    if (!bytesPerSec) return 'N/A';
+    return `${formatBytes(bytesPerSec)}/s`;
+  };
+  
+  // Format date and time
   const formatDate = (dateString?: string): string => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString() + ' ' + new Date(dateString).toLocaleTimeString();
   };
-
+  
+  // Calculate and format uptime
   const formatUptime = (lastBoot?: string): string => {
     if (!lastBoot) return 'N/A';
     
@@ -156,6 +350,34 @@ const ServerDetail = () => {
     } else {
       return `${minutes} minutes`;
     }
+  };
+  
+  // Progress bar component for utilization metrics
+  const UtilizationBar = ({ percent, color }: { percent: number, color: string }) => {
+    const safePercent = isNaN(percent) ? 0 : Math.min(100, Math.max(0, percent));
+    let bgColorClass;
+    
+    // Default color scheme
+    if (!color) {
+      if (safePercent < 60) {
+        bgColorClass = 'bg-green-500';
+      } else if (safePercent < 80) {
+        bgColorClass = 'bg-yellow-500';
+      } else {
+        bgColorClass = 'bg-red-500';
+      }
+    } else {
+      bgColorClass = color;
+    }
+    
+    return (
+      <div className="w-full bg-gray-200 rounded-full h-2.5 my-1">
+        <div 
+          className={`${bgColorClass} h-2.5 rounded-full`} 
+          style={{ width: `${safePercent}%` }}
+        ></div>
+      </div>
+    );
   };
 
   const getStatusColor = (status: string): string => {
@@ -261,21 +483,96 @@ const ServerDetail = () => {
         </div>
 
         <div className="border-t border-gray-200 px-4 py-5 sm:px-6">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-4">
+            {/* CPU and cores */}
             <div className="sm:col-span-1">
-              <div className="text-sm font-medium text-gray-500">Memory</div>
+              <div className="text-sm font-medium text-gray-500">CPU</div>
               <div className="mt-1 text-sm text-gray-900 flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
-                {formatMemory(server.ram)}
+                {server.cpu_cores || 'N/A'} Cores
+                {server.cpu_sockets && server.cpu_threads_per_core && (
+                  <span className="ml-2 text-xs text-gray-500">
+                    ({server.cpu_sockets} Socket{server.cpu_sockets > 1 ? 's' : ''}, {server.cpu_threads_per_core} Thread{server.cpu_threads_per_core > 1 ? 's' : ''}/Core)
+                  </span>
+                )}
+              </div>
+              
+              {/* CPU utilization bar */}
+              {server.metrics?.cpu_utilization !== undefined && (
+                <div className="mt-2">
+                  <div className="flex justify-between items-center text-xs text-gray-600">
+                    <span>Utilization: {server.metrics.cpu_utilization}%</span>
+                  </div>
+                  <UtilizationBar 
+                    percent={server.metrics.cpu_utilization} 
+                    color={server.metrics.cpu_utilization < 60 ? 'bg-green-500' : 
+                           server.metrics.cpu_utilization < 80 ? 'bg-yellow-500' : 'bg-red-500'} 
+                  />
+                </div>
+              )}
+            </div>
+            
+            {/* Memory usage */}
+            <div className="sm:col-span-1">
+              <div className="text-sm font-medium text-gray-500">Memory</div>
+              <div className="mt-1 text-sm text-gray-900">
+                {server.memory_total_bytes ? formatBytes(server.memory_total_bytes) : formatMemory(server.ram)}
                 {server.reservation_ratio && (
                   <span className="ml-2 text-xs text-gray-500">
                     (Reservation: {(server.reservation_ratio * 100).toFixed(0)}%)
                   </span>
                 )}
               </div>
+              
+              {/* Memory utilization bar */}
+              {server.memory_total_bytes && server.memory_available_bytes && (
+                <div className="mt-2">
+                  <div className="flex justify-between items-center text-xs text-gray-600">
+                    <span>Used: {formatBytes(server.memory_utilized_bytes)} ({server.memory_utilization_percent?.toFixed(1)}%)</span>
+                    <span>Free: {formatBytes(server.memory_available_bytes)}</span>
+                  </div>
+                  <UtilizationBar 
+                    percent={server.memory_utilization_percent || 0} 
+                    color={server.memory_utilization_percent && server.memory_utilization_percent < 60 ? 'bg-green-500' : 
+                           server.memory_utilization_percent && server.memory_utilization_percent < 80 ? 'bg-yellow-500' : 'bg-red-500'} 
+                  />
+                </div>
+              )}
             </div>
+            
+            {/* Disk usage */}
+            <div className="sm:col-span-1">
+              <div className="text-sm font-medium text-gray-500">Disk</div>
+              <div className="mt-1 text-sm text-gray-900">
+                {formatDiskSpace(server.disk_total_bytes)}
+              </div>
+              
+              {/* Disk utilization bar */}
+              {server.disk_total_bytes && server.disk_available_bytes && (
+                <div className="mt-2">
+                  <div className="flex justify-between items-center text-xs text-gray-600">
+                    <span>Used: {formatBytes(server.disk_utilized_bytes)} ({server.disk_utilization_percent?.toFixed(1)}%)</span>
+                    <span>Free: {formatBytes(server.disk_available_bytes)}</span>
+                  </div>
+                  <UtilizationBar 
+                    percent={server.disk_utilization_percent || 0} 
+                    color={server.disk_utilization_percent && server.disk_utilization_percent < 60 ? 'bg-green-500' : 
+                           server.disk_utilization_percent && server.disk_utilization_percent < 80 ? 'bg-yellow-500' : 'bg-red-500'} 
+                  />
+                </div>
+              )}
+              
+              {/* Disk I/O metrics */}
+              {server.metrics?.disk_io && (
+                <div className="mt-1 text-xs text-gray-600">
+                  <span>I/O: {formatDataRate(server.metrics.disk_io.read_bytes_sec)} read, {formatDataRate(server.metrics.disk_io.write_bytes_sec)} write</span>
+                </div>
+              )}
+            </div>
+            
+            {/* Uptime and platform */}
             <div className="sm:col-span-1">
               <div className="text-sm font-medium text-gray-500">Uptime</div>
               <div className="mt-1 text-sm text-gray-900 flex items-center">
@@ -284,10 +581,9 @@ const ServerDetail = () => {
                 </svg>
                 {formatUptime(server.last_boot)}
               </div>
-            </div>
-            <div className="sm:col-span-1">
-              <div className="text-sm font-medium text-gray-500">Current Platform</div>
-              <div className="mt-1 text-sm text-gray-900 font-mono">
+              
+              <div className="mt-3 text-sm font-medium text-gray-500">Platform</div>
+              <div className="mt-1 text-sm text-gray-900 font-mono truncate">
                 {server.current_platform || 'unknown'}
                 {server.current_platform !== server.boot_platform && (
                   <div className="mt-1 text-yellow-600 text-xs">
@@ -315,6 +611,19 @@ const ServerDetail = () => {
               Overview
             </button>
             <button
+              onClick={() => setActiveTab('metrics')}
+              className={`${
+                activeTab === 'metrics'
+                  ? 'border-indigo-500 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              Metrics
+            </button>
+            <button
               onClick={() => setActiveTab('specs')}
               className={`${
                 activeTab === 'specs'
@@ -340,15 +649,323 @@ const ServerDetail = () => {
                 activeTab === 'vms'
                   ? 'border-indigo-500 text-indigo-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
             >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+              </svg>
               Virtual Machines
+            </button>
+            <button
+              onClick={() => setActiveTab('network')}
+              className={`${
+                activeTab === 'network'
+                  ? 'border-indigo-500 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+              </svg>
+              Network
             </button>
           </nav>
         </div>
 
         {/* Tab content */}
         <div className="p-6">
+          {activeTab === 'metrics' && (
+            <div className="space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* CPU Utilization Card */}
+                <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">CPU Utilization</h3>
+                  
+                  {/* CPU utilization "graph" - simulated with bars for now */}
+                  <div className="h-48 flex items-end space-x-1">
+                    {/* Generate 30 dummy bars with random heights to simulate a graph */}
+                    {Array.from({ length: 30 }).map((_, i) => {
+                      const height = server.metrics?.cpu_utilization || Math.floor(Math.random() * 60) + 10;
+                      let barColor = 'bg-green-500';
+                      
+                      if (height > 80) barColor = 'bg-red-500';
+                      else if (height > 60) barColor = 'bg-yellow-500';
+                      
+                      return (
+                        <div 
+                          key={i} 
+                          className={`${barColor} w-full rounded-t`} 
+                          style={{ height: `${height}%` }}
+                        ></div>
+                      );
+                    })}
+                  </div>
+                  
+                  {/* Current value */}
+                  <div className="mt-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-500">Current:</span>
+                      <span className="text-lg font-semibold">{server.metrics?.cpu_utilization || 0}%</span>
+                    </div>
+                    <UtilizationBar 
+                      percent={server.metrics?.cpu_utilization || 0} 
+                      color="" 
+                    />
+                  </div>
+                  
+                  {/* CPU Info */}
+                  <div className="mt-4 grid grid-cols-2 gap-2 text-sm text-gray-600">
+                    <div>
+                      <span className="font-medium">CPU Type:</span> {server.cpu_type || 'N/A'}
+                    </div>
+                    <div>
+                      <span className="font-medium">Cores:</span> {server.cpu_cores || 'N/A'}
+                    </div>
+                    {server.cpu_sockets && (
+                      <div>
+                        <span className="font-medium">Sockets:</span> {server.cpu_sockets}
+                      </div>
+                    )}
+                    {server.cpu_threads_per_core && (
+                      <div>
+                        <span className="font-medium">Threads/Core:</span> {server.cpu_threads_per_core}
+                      </div>
+                    )}
+                    {server.cpu_speed_mhz && (
+                      <div>
+                        <span className="font-medium">Clock Speed:</span> {server.cpu_speed_mhz} MHz
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Memory Usage Card */}
+                <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">Memory Usage</h3>
+                  
+                  {/* Memory usage visualization */}
+                  <div className="h-48 flex items-center justify-center">
+                    {/* Create a donut chart for memory usage */}
+                    <div className="relative h-32 w-32">
+                      <svg viewBox="0 0 36 36" className="h-32 w-32">
+                        {/* Background circle */}
+                        <circle 
+                          cx="18" cy="18" r="15.91549430918954" 
+                          fill="transparent" 
+                          stroke="#e5e7eb" 
+                          strokeWidth="3"
+                        ></circle>
+                        
+                        {/* Foreground circle showing usage */}
+                        <circle 
+                          cx="18" cy="18" r="15.91549430918954" 
+                          fill="transparent" 
+                          stroke={
+                            server.memory_utilization_percent && server.memory_utilization_percent < 60 ? '#10B981' : 
+                            server.memory_utilization_percent && server.memory_utilization_percent < 80 ? '#F59E0B' : '#EF4444'
+                          }
+                          strokeWidth="3"
+                          strokeDasharray={`${server.memory_utilization_percent || 0} ${100 - (server.memory_utilization_percent || 0)}`}
+                          strokeDashoffset="25"
+                          strokeLinecap="round"
+                        ></circle>
+                        
+                        {/* Percentage text in center */}
+                        <text 
+                          x="18" y="18" 
+                          fontFamily="sans-serif" 
+                          fontSize="0.5rem" 
+                          textAnchor="middle" 
+                          dominantBaseline="middle"
+                        >
+                          <tspan x="18" y="18" fontSize="0.6rem" fontWeight="bold">
+                            {server.memory_utilization_percent?.toFixed(1) || 0}%
+                          </tspan>
+                          <tspan x="18" y="22" fontSize="0.25rem">
+                            used
+                          </tspan>
+                        </text>
+                      </svg>
+                    </div>
+                  </div>
+                  
+                  {/* Memory details */}
+                  <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-500">Total:</span>
+                      <div className="font-medium">{formatBytes(server.memory_total_bytes)}</div>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Used:</span>
+                      <div className="font-medium">{formatBytes(server.memory_utilized_bytes)}</div>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Available:</span>
+                      <div className="font-medium">{formatBytes(server.memory_available_bytes)}</div>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Utilization:</span>
+                      <div className="font-medium">{server.memory_utilization_percent?.toFixed(1) || 0}%</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Disk I/O Card */}
+                <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">Disk I/O</h3>
+                  
+                  {/* Disk I/O visualization */}
+                  <div className="h-44 mb-4">
+                    <div className="h-full flex flex-col justify-center">
+                      {/* Read/Write bars */}
+                      <div className="mb-4">
+                        <div className="flex justify-between text-sm mb-1">
+                          <span className="text-gray-500">Read Rate:</span>
+                          <span className="font-medium">{formatDataRate(server.metrics?.disk_io?.read_bytes_sec)}</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-4">
+                          <div 
+                            className="bg-blue-500 h-4 rounded-full"
+                            style={{ 
+                              width: `${Math.min(100, (server.metrics?.disk_io?.read_bytes_sec || 0) / (200 * 1024 * 1024) * 100)}%` 
+                            }}
+                          ></div>
+                        </div>
+                      </div>
+                      
+                      <div className="mb-4">
+                        <div className="flex justify-between text-sm mb-1">
+                          <span className="text-gray-500">Write Rate:</span>
+                          <span className="font-medium">{formatDataRate(server.metrics?.disk_io?.write_bytes_sec)}</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-4">
+                          <div 
+                            className="bg-purple-500 h-4 rounded-full"
+                            style={{ 
+                              width: `${Math.min(100, (server.metrics?.disk_io?.write_bytes_sec || 0) / (200 * 1024 * 1024) * 100)}%` 
+                            }}
+                          ></div>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <div className="flex justify-between text-sm mb-1">
+                          <span className="text-gray-500">IOPS:</span>
+                          <span className="font-medium">{server.metrics?.disk_io?.iops || 0}</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-4">
+                          <div 
+                            className="bg-green-500 h-4 rounded-full"
+                            style={{ 
+                              width: `${Math.min(100, (server.metrics?.disk_io?.iops || 0) / 5000 * 100)}%` 
+                            }}
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Disk usage stats */}
+                  <div className="border-t border-gray-200 pt-4 mt-4">
+                    <div className="flex justify-between items-center text-sm mb-2">
+                      <span className="text-gray-500">Total Storage:</span>
+                      <span className="font-medium">{formatDiskSpace(server.disk_total_bytes)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm mb-2">
+                      <span className="text-gray-500">Used:</span>
+                      <span className="font-medium">{formatDiskSpace(server.disk_utilized_bytes)} ({server.disk_utilization_percent?.toFixed(1)}%)</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-500">Available:</span>
+                      <span className="font-medium">{formatDiskSpace(server.disk_available_bytes)}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Network Activity Card */}
+                <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">Network Activity</h3>
+                  
+                  {/* Network visualization */}
+                  <div className="h-44 mb-4">
+                    <div className="h-full flex flex-col justify-center">
+                      {/* Network bars */}
+                      <div className="mb-6">
+                        <div className="flex justify-between text-sm mb-1">
+                          <span className="text-gray-500">Inbound (RX):</span>
+                          <span className="font-medium">{formatDataRate(server.metrics?.network_throughput?.rx_bytes_sec)}</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-4">
+                          <div 
+                            className="bg-indigo-500 h-4 rounded-full"
+                            style={{ 
+                              width: `${Math.min(100, (server.metrics?.network_throughput?.rx_bytes_sec || 0) / (200 * 1024 * 1024) * 100)}%` 
+                            }}
+                          ></div>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <div className="flex justify-between text-sm mb-1">
+                          <span className="text-gray-500">Outbound (TX):</span>
+                          <span className="font-medium">{formatDataRate(server.metrics?.network_throughput?.tx_bytes_sec)}</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-4">
+                          <div 
+                            className="bg-teal-500 h-4 rounded-full"
+                            style={{ 
+                              width: `${Math.min(100, (server.metrics?.network_throughput?.tx_bytes_sec || 0) / (200 * 1024 * 1024) * 100)}%` 
+                            }}
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="border-t border-gray-200 pt-4">
+                    <div className="text-sm text-gray-500 mb-2">
+                      Network Interfaces:
+                    </div>
+                    {server.network_interfaces ? (
+                      <div className="overflow-hidden rounded-md">
+                        <div className="text-xs text-gray-600 grid grid-cols-4 gap-2 font-medium bg-gray-50 p-2">
+                          <div>Interface</div>
+                          <div>IP Address</div>
+                          <div>Status</div>
+                          <div>Speed</div>
+                        </div>
+                        <div className="divide-y divide-gray-200">
+                          {server.network_interfaces.map((iface, i) => (
+                            <div key={i} className="text-xs grid grid-cols-4 gap-2 p-2">
+                              <div className="font-medium">{iface.name}</div>
+                              <div>{iface.ip}</div>
+                              <div>
+                                <span className={`px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                  iface.link_status === 'up' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {iface.link_status}
+                                </span>
+                              </div>
+                              <div>{iface.speed}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-sm text-gray-600 italic">No network interface data available</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex justify-end">
+                <span className="text-xs text-gray-500 italic">Metrics are refreshed every 5 seconds</span>
+              </div>
+            </div>
+          )}
+          
           {activeTab === 'overview' && (
             <div className="space-y-6">
               <div className="bg-gray-50 p-4 rounded-lg">
@@ -532,6 +1149,178 @@ const ServerDetail = () => {
             </div>
           )}
 
+          {activeTab === 'network' && (
+            <div className="space-y-6">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Network Interfaces</h3>
+                
+                {server.network_interfaces && server.network_interfaces.length > 0 ? (
+                  <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+                    <table className="min-w-full divide-y divide-gray-300">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Interface</th>
+                          <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">MAC Address</th>
+                          <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">IP Address</th>
+                          <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Netmask</th>
+                          <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
+                          <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Speed</th>
+                          <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Type</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200 bg-white">
+                        {server.network_interfaces.map((iface, index) => (
+                          <tr key={index} className={index % 2 === 0 ? undefined : 'bg-gray-50'}>
+                            <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">{iface.name}</td>
+                            <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 font-mono">{iface.mac}</td>
+                            <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{iface.ip}</td>
+                            <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{iface.netmask}</td>
+                            <td className="whitespace-nowrap px-3 py-4 text-sm">
+                              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                iface.link_status === 'up' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                              }`}>
+                                {iface.link_status}
+                              </span>
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{iface.speed}</td>
+                            <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{iface.type}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="text-center py-6">
+                    <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+                    </svg>
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">No Network Interfaces</h3>
+                    <p className="mt-1 text-sm text-gray-500">No network interface information is available for this server.</p>
+                  </div>
+                )}
+              </div>
+              
+              {/* Network Activity Section */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Network Activity</h3>
+                
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                  {/* Network Throughput */}
+                  <div className="bg-white p-4 rounded-lg shadow-sm">
+                    <h4 className="text-base font-medium text-gray-700 mb-3">Current Throughput</h4>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <div className="flex justify-between text-sm mb-1">
+                          <span className="text-gray-500">Inbound (RX):</span>
+                          <span className="font-medium">{formatDataRate(server.metrics?.network_throughput?.rx_bytes_sec)}</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-4">
+                          <div 
+                            className="bg-indigo-500 h-4 rounded-full"
+                            style={{ 
+                              width: `${Math.min(100, (server.metrics?.network_throughput?.rx_bytes_sec || 0) / (200 * 1024 * 1024) * 100)}%` 
+                            }}
+                          ></div>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <div className="flex justify-between text-sm mb-1">
+                          <span className="text-gray-500">Outbound (TX):</span>
+                          <span className="font-medium">{formatDataRate(server.metrics?.network_throughput?.tx_bytes_sec)}</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-4">
+                          <div 
+                            className="bg-teal-500 h-4 rounded-full"
+                            style={{ 
+                              width: `${Math.min(100, (server.metrics?.network_throughput?.tx_bytes_sec || 0) / (200 * 1024 * 1024) * 100)}%` 
+                            }}
+                          ></div>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <div className="flex justify-between text-sm mb-1">
+                          <span className="text-gray-500">Total:</span>
+                          <span className="font-medium">
+                            {formatDataRate((server.metrics?.network_throughput?.rx_bytes_sec || 0) + 
+                                           (server.metrics?.network_throughput?.tx_bytes_sec || 0))}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Network Stats Placeholder */}
+                  <div className="bg-white p-4 rounded-lg shadow-sm">
+                    <h4 className="text-base font-medium text-gray-700 mb-3">Traffic Statistics</h4>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <div className="text-xs text-gray-500">Today's Transfer</div>
+                        <div className="text-lg font-medium">{formatBytes(Math.random() * 50 * 1024 * 1024 * 1024)}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-500">Total Transfer</div>
+                        <div className="text-lg font-medium">{formatBytes(Math.random() * 500 * 1024 * 1024 * 1024)}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-500">Peak Throughput</div>
+                        <div className="text-lg font-medium">{formatDataRate(Math.random() * 800 * 1024 * 1024)}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-500">Avg Throughput</div>
+                        <div className="text-lg font-medium">{formatDataRate(Math.random() * 300 * 1024 * 1024)}</div>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-4 text-xs text-gray-500 italic text-right">
+                      Simulated data for demonstration
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Connectivity Status */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Connectivity Status</h3>
+                
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                  <div className="bg-white p-3 rounded shadow-sm flex justify-between items-center">
+                    <div>
+                      <div className="text-sm text-gray-500">Internet Access</div>
+                      <div className="text-base font-medium">Available</div>
+                    </div>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      Up
+                    </span>
+                  </div>
+                  
+                  <div className="bg-white p-3 rounded shadow-sm flex justify-between items-center">
+                    <div>
+                      <div className="text-sm text-gray-500">Internal Network</div>
+                      <div className="text-base font-medium">10.0.0.0/8</div>
+                    </div>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      Connected
+                    </span>
+                  </div>
+                  
+                  <div className="bg-white p-3 rounded shadow-sm flex justify-between items-center">
+                    <div>
+                      <div className="text-sm text-gray-500">Storage Network</div>
+                      <div className="text-base font-medium">192.168.0.0/16</div>
+                    </div>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      Active
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
           {activeTab === 'vms' && (
             <div className="space-y-6">
               <div className="bg-gray-50 p-4 rounded-lg">
