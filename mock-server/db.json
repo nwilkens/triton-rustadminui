@@ -74,20 +74,28 @@
       "server_uuid": "5042c704-3004-4a97-a7a8-af398c40f8f4",
       "image_uuid": "c0ffeec0-ffee-c0ff-eec0-ffeec0ffeec0",
       "package_name": "standard-2",
-      "package_uuid": "d0e1f2a3-b4c5-d6e7-f8a9-b0c1d2e3f4a5",
-      "networks": [
+      "billing_id": "d0e1f2a3-b4c5-d6e7-f8a9-b0c1d2e3f4a5",
+      "create_timestamp": "2023-01-01T00:00:00Z",
+      "nics": [
         {
-          "uuid": "f0e1d2c3-b4a5-9876-5432-1fedcba09876",
-          "name": "public",
-          "ip": "10.0.0.10"
+          "interface": "net0",
+          "mac": "22:a5:a9:2a:c7:67",
+          "vlan_id": 0,
+          "nic_tag": "admin",
+          "netmask": "255.255.255.0",
+          "ip": "10.0.0.10",
+          "ips": ["10.0.0.10/24"],
+          "network_uuid": "f0e1d2c3-b4a5-9876-5432-1fedcba09876",
+          "mtu": 1500,
+          "primary": true
         }
       ],
       "tags": {
         "environment": "production",
         "service": "web"
       },
-      "created_at": "2023-01-01T00:00:00Z",
-      "updated_at": "2023-01-15T00:00:00Z"
+      "customer_metadata": {},
+      "internal_metadata": {}
     },
     {
       "uuid": "b2c3d4e5-f6a7-b8c9-d0e1-f2a3b4c5d6e7",
@@ -101,25 +109,173 @@
       "server_uuid": "8d1a9b2c-3e4f-5a6b-7c8d-9e0f1a2b3c4d",
       "image_uuid": "d0ffeec0-ffee-c0ff-eec0-ffeec0ffeec0",
       "package_name": "standard-8",
-      "package_uuid": "e0f1a2b3-c4d5-e6f7-a8b9-c0d1e2f3a4b5",
-      "networks": [
+      "billing_id": "e0f1a2b3-c4d5-e6f7-a8b9-c0d1e2f3a4b5",
+      "create_timestamp": "2023-01-01T00:00:00Z",
+      "nics": [
         {
-          "uuid": "f0e1d2c3-b4a5-9876-5432-1fedcba09876",
-          "name": "public",
-          "ip": "10.0.0.20"
+          "interface": "net0",
+          "mac": "22:b6:b9:3a:c8:78",
+          "vlan_id": 0,
+          "nic_tag": "admin",
+          "netmask": "255.255.255.0",
+          "ip": "10.0.0.20",
+          "ips": ["10.0.0.20/24"],
+          "network_uuid": "f0e1d2c3-b4a5-9876-5432-1fedcba09876",
+          "mtu": 1500,
+          "primary": true
         },
         {
-          "uuid": "e0d1c2b3-a4b5-9876-5432-1fecbda09876",
-          "name": "private",
-          "ip": "192.168.0.20"
+          "interface": "net1",
+          "mac": "22:c7:c9:4a:d8:89",
+          "vlan_id": 200,
+          "nic_tag": "internal",
+          "netmask": "255.255.255.0",
+          "ip": "192.168.0.20",
+          "ips": ["192.168.0.20/24"],
+          "network_uuid": "e0d1c2b3-a4b5-9876-5432-1fecbda09876",
+          "mtu": 1500,
+          "primary": false
         }
       ],
       "tags": {
         "environment": "production",
         "service": "database"
       },
-      "created_at": "2023-01-01T00:00:00Z",
-      "updated_at": "2023-01-15T00:00:00Z"
+      "customer_metadata": {},
+      "internal_metadata": {}
+    },
+    {
+      "uuid": "fa8bac6e-187d-4d3d-b23e-44d39ba2842b",
+      "alias": "binder0",
+      "autoboot": true,
+      "brand": "joyent-minimal",
+      "billing_id": "4769a8f9-de51-4c1e-885f-c3920cc68137",
+      "cpu_cap": 300,
+      "cpu_shares": 1024,
+      "create_timestamp": "2024-12-23T03:00:05.672Z",
+      "customer_metadata": {
+        "sapi-url": "http://10.199.199.34",
+        "assets-ip": "10.199.199.11",
+        "metricPorts": "1053"
+      },
+      "ram": 1024,
+      "vcpus": 1,
+      "disk": 25,
+      "quota": 25,
+      "destroyed": null,
+      "firewall_enabled": false,
+      "internal_metadata": {
+        "set_resolvers": false
+      },
+      "owner_uuid": "930896af-bf8c-48d4-885c-6573a94b1853",
+      "server_uuid": "a3d61c55-d257-af21-8dbb-48210b331d42",
+      "state": "running",
+      "tags": {
+        "smartdc_role": "binder",
+        "smartdc_type": "core"
+      },
+      "nics": [
+        {
+          "interface": "net0",
+          "mac": "22:a5:a9:2a:c7:67",
+          "vlan_id": 0,
+          "nic_tag": "admin",
+          "netmask": "255.255.255.0",
+          "ip": "10.199.199.14",
+          "ips": ["10.199.199.14/24"],
+          "network_uuid": "6d19c75b-69fd-45fa-a5bc-632d09328a2c",
+          "mtu": 1500,
+          "primary": true
+        }
+      ]
+    },
+    {
+      "uuid": "eb8ca5d2-475b-7e9a-cf32-87ae7540dfa2",
+      "alias": "manatee0",
+      "autoboot": true,
+      "brand": "joyent-minimal",
+      "billing_id": "8d205d81-3672-4297-b80f-7822eb6c998b",
+      "cpu_cap": 400,
+      "cpu_shares": 1024,
+      "create_timestamp": "2024-12-23T03:00:08.852Z",
+      "customer_metadata": {
+        "sapi-url": "http://10.199.199.34",
+        "assets-ip": "10.199.199.11"
+      },
+      "ram": 2048,
+      "vcpus": 1,
+      "disk": 25,
+      "quota": 25,
+      "destroyed": null,
+      "firewall_enabled": false,
+      "internal_metadata": {
+        "set_resolvers": false
+      },
+      "owner_uuid": "930896af-bf8c-48d4-885c-6573a94b1853",
+      "server_uuid": "a3d61c55-d257-af21-8dbb-48210b331d42",
+      "state": "running",
+      "tags": {
+        "smartdc_role": "manatee",
+        "smartdc_type": "core"
+      },
+      "nics": [
+        {
+          "interface": "net0",
+          "mac": "22:a5:a9:3b:d8:78",
+          "vlan_id": 0,
+          "nic_tag": "admin",
+          "netmask": "255.255.255.0",
+          "ip": "10.199.199.15",
+          "ips": ["10.199.199.15/24"],
+          "network_uuid": "6d19c75b-69fd-45fa-a5bc-632d09328a2c",
+          "mtu": 1500,
+          "primary": true
+        }
+      ]
+    },
+    {
+      "uuid": "c939e81a-1fdf-479d-bed7-c641f34971c1",
+      "alias": "moray0",
+      "autoboot": true,
+      "brand": "joyent-minimal",
+      "billing_id": "8d205d81-3672-4297-b80f-7822eb6c998b",
+      "cpu_cap": 400,
+      "cpu_shares": 1024,
+      "create_timestamp": "2024-12-23T03:00:12.543Z",
+      "customer_metadata": {
+        "sapi-url": "http://10.199.199.34",
+        "assets-ip": "10.199.199.11"
+      },
+      "ram": 2048,
+      "vcpus": 1,
+      "disk": 25,
+      "quota": 25,
+      "destroyed": null,
+      "firewall_enabled": false,
+      "internal_metadata": {
+        "set_resolvers": false
+      },
+      "owner_uuid": "930896af-bf8c-48d4-885c-6573a94b1853",
+      "server_uuid": "a3d61c55-d257-af21-8dbb-48210b331d42",
+      "state": "running",
+      "tags": {
+        "smartdc_role": "moray",
+        "smartdc_type": "core"
+      },
+      "nics": [
+        {
+          "interface": "net0",
+          "mac": "22:a5:a9:4c:e9:89",
+          "vlan_id": 0,
+          "nic_tag": "admin",
+          "netmask": "255.255.255.0",
+          "ip": "10.199.199.16",
+          "ips": ["10.199.199.16/24"],
+          "network_uuid": "6d19c75b-69fd-45fa-a5bc-632d09328a2c",
+          "mtu": 1500,
+          "primary": true
+        }
+      ]
     }
   ],
   "networks": [

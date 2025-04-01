@@ -7,9 +7,19 @@ interface VM {
   state: string;
   brand: string;
   memory: number;
+  quota?: number;
   disk: number;
   vcpus: number;
   owner_uuid: string;
+  ips?: string[];
+  nics?: any[];
+  image_uuid?: string;
+  package_uuid?: string;
+  server_uuid?: string;
+  created_at?: string;
+  tags?: any;
+  customer_metadata?: any;
+  internal_metadata?: any;
 }
 
 const VMsList = () => {
@@ -39,8 +49,10 @@ const VMsList = () => {
     return `${gb.toFixed(1)} GB`;
   };
 
-  const formatDisk = (bytes: number): string => {
-    const gb = bytes / (1024 * 1024 * 1024);
+  const formatDisk = (vm: VM): string => {
+    // Use quota field if available (for zones), otherwise use disk field
+    const diskBytes = vm.quota ? vm.quota : vm.disk;
+    const gb = diskBytes / (1024 * 1024 * 1024);
     return `${gb.toFixed(0)} GB`;
   };
 
@@ -157,7 +169,7 @@ const VMsList = () => {
                           {formatMemory(vm.memory)}
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {formatDisk(vm.disk)}
+                          {formatDisk(vm)}
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                           {vm.vcpus}

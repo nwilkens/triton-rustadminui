@@ -1,3 +1,4 @@
+use reqwest;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use anyhow::Result;
@@ -38,64 +39,94 @@ impl VmapiService {
             return Err(AppError::InternalServerError(format!("Failed to fetch VMs from VMAPI: {} - {}", status, error_text)));
         }
         
-        // Parse the response JSON
+        // Parse the response JSON directly into our VM model
         let vms_data: Vec<serde_json::Value> = response
             .json()
             .await
-            .map_err(|e| AppError::InternalServerError(format!("Failed to parse VMAPI response: {}", e)))?;
+            .map_err(|e| {
+                info!("Error parsing VMAPI response: {}", e);
+                AppError::InternalServerError(format!("Failed to parse VMAPI response: {}", e))
+            })?;
+        
+        // Convert to our VM model
+        let mut vms = Vec::new();
+        
+        for vm_data in vms_data {
+            // Extract the required fields
+            let uuid = match vm_data["uuid"].as_str() {
+                Some(uuid) => uuid,
+                None => continue, // Skip if UUID is missing
+            };
             
-        // Convert the response data to our VM model
-        let vms: Vec<crate::api::vms::Vm> = vms_data
-            .into_iter()
-            .filter_map(|vm_data| {
-                let uuid = vm_data["uuid"].as_str()?;
-                let alias = vm_data["alias"].as_str()?;
-                let state = vm_data["state"].as_str()?;
-                let brand = vm_data["brand"].as_str()?;
-                let memory = vm_data["ram"].as_u64()?;
-                let disk = vm_data["quota"].as_u64()?;
-                let vcpus = vm_data["vcpus"].as_u64()? as u32;
-                
-                // Extract IPs from nics
-                let mut ips = Vec::new();
-                if let Some(nics) = vm_data["nics"].as_array() {
-                    for nic in nics {
-                        if let Some(ip) = nic["ip"].as_str() {
-                            ips.push(ip.to_string());
-                        }
+            let alias = match vm_data["alias"].as_str() {
+                Some(alias) => alias,
+                None => continue, // Skip if alias is missing
+            };
+            
+            let state = match vm_data["state"].as_str() {
+                Some(state) => state,
+                None => "unknown",
+            };
+            
+            let brand = match vm_data["brand"].as_str() {
+                Some(brand) => brand,
+                None => "unknown",
+            };
+            
+            let memory = vm_data["ram"].as_u64().unwrap_or(0);
+            let disk = vm_data["quota"].as_u64().unwrap_or(0);
+            let vcpus = vm_data["vcpus"].as_u64().unwrap_or(1) as u32;
+            
+            // Extract IPs from nics
+            let mut ips = Vec::new();
+            if let Some(nics) = vm_data["nics"].as_array() {
+                for nic in nics {
+                    if let Some(ip) = nic["ip"].as_str() {
+                        ips.push(ip.to_string());
                     }
                 }
-                
-                let owner_uuid = vm_data["owner_uuid"].as_str()?.to_string();
-                let image_uuid = vm_data["image_uuid"].as_str().unwrap_or("").to_string();
-                let package_uuid = vm_data["billing_id"].as_str().unwrap_or("").to_string();
-                let server_uuid = vm_data["server_uuid"].as_str().unwrap_or("").to_string();
-                let created_at = vm_data["created_at"].as_str().unwrap_or("").to_string();
-                
-                let tags = vm_data["tags"].clone();
-                let customer_metadata = vm_data["customer_metadata"].clone();
-                let internal_metadata = vm_data["internal_metadata"].clone();
-                
-                Some(crate::api::vms::Vm {
-                    uuid: uuid.to_string(),
-                    alias: alias.to_string(),
-                    state: state.to_string(),
-                    brand: brand.to_string(),
-                    memory,
-                    disk,
-                    vcpus,
-                    ips,
-                    owner_uuid,
-                    image_uuid,
-                    package_uuid,
-                    server_uuid,
-                    created_at,
-                    tags,
-                    customer_metadata,
-                    internal_metadata,
-                })
-            })
-            .collect();
+            }
+            
+            let owner_uuid = match vm_data["owner_uuid"].as_str() {
+                Some(owner_uuid) => owner_uuid,
+                None => continue, // Skip if owner_uuid is missing
+            };
+            
+            let image_uuid = vm_data["image_uuid"].as_str().unwrap_or("").to_string();
+            let package_uuid = vm_data["billing_id"].as_str().unwrap_or("").to_string();
+            let server_uuid = vm_data["server_uuid"].as_str().unwrap_or("").to_string();
+            
+            // Handle different timestamp names: create_timestamp or created_at
+            let created_at = match vm_data["create_timestamp"].as_str() {
+                Some(ts) => ts.to_string(),
+                None => vm_data["created_at"].as_str().unwrap_or("").to_string(),
+            };
+            
+            let tags = vm_data["tags"].clone();
+            let customer_metadata = vm_data["customer_metadata"].clone();
+            let internal_metadata = vm_data["internal_metadata"].clone();
+            
+            vms.push(crate::api::vms::Vm {
+                uuid: uuid.to_string(),
+                alias: alias.to_string(),
+                state: state.to_string(),
+                brand: brand.to_string(),
+                memory,
+                quota: disk, // Use disk value for quota
+                disk,
+                vcpus,
+                ips,
+                owner_uuid: owner_uuid.to_string(),
+                image_uuid,
+                package_uuid,
+                server_uuid,
+                created_at,
+                tags,
+                customer_metadata,
+                internal_metadata,
+                nics: None,
+            });
+        }
             
         info!("Successfully fetched {} VMs from VMAPI", vms.len());
         Ok(vms)
@@ -137,23 +168,23 @@ impl VmapiService {
             
         let state = vm_data["state"]
             .as_str()
-            .ok_or_else(|| AppError::InternalServerError("State not found in VMAPI response".to_string()))?;
+            .unwrap_or("unknown");
             
         let brand = vm_data["brand"]
             .as_str()
-            .ok_or_else(|| AppError::InternalServerError("Brand not found in VMAPI response".to_string()))?;
+            .unwrap_or("unknown");
             
         let memory = vm_data["ram"]
             .as_u64()
-            .ok_or_else(|| AppError::InternalServerError("Memory not found in VMAPI response".to_string()))?;
+            .unwrap_or(0);
             
         let disk = vm_data["quota"]
             .as_u64()
-            .ok_or_else(|| AppError::InternalServerError("Disk not found in VMAPI response".to_string()))?;
+            .unwrap_or(0);
             
         let vcpus = vm_data["vcpus"]
             .as_u64()
-            .ok_or_else(|| AppError::InternalServerError("VCPUs not found in VMAPI response".to_string()))? as u32;
+            .unwrap_or(1) as u32;
             
         // Extract IPs from nics
         let mut ips = Vec::new();
@@ -185,10 +216,11 @@ impl VmapiService {
             .unwrap_or("")
             .to_string();
             
-        let created_at = vm_data["created_at"]
-            .as_str()
-            .unwrap_or("")
-            .to_string();
+        // Handle different timestamp names
+        let created_at = match vm_data["create_timestamp"].as_str() {
+            Some(ts) => ts.to_string(),
+            None => vm_data["created_at"].as_str().unwrap_or("").to_string(),
+        };
             
         let tags = vm_data["tags"].clone();
         let customer_metadata = vm_data["customer_metadata"].clone();
@@ -200,6 +232,7 @@ impl VmapiService {
             state: state.to_string(),
             brand: brand.to_string(),
             memory,
+            quota: disk, // We'll use disk value for quota since we're already extracting it from quota field
             disk,
             vcpus,
             ips,
@@ -211,6 +244,7 @@ impl VmapiService {
             tags,
             customer_metadata,
             internal_metadata,
+            nics: None,
         };
         
         info!("Successfully fetched VM {} ({})", uuid, alias);
@@ -261,6 +295,7 @@ impl VmapiService {
             state: "provisioning".to_string(),
             brand: vm.brand.clone(),
             memory: 0, // Will be set based on package
+            quota: 0,  // Will be set based on package
             disk: 0,   // Will be set based on package
             vcpus: 0,  // Will be set based on package
             ips: vec![],
@@ -272,6 +307,7 @@ impl VmapiService {
             tags: vm.tags.clone().unwrap_or(serde_json::json!({})),
             customer_metadata: vm.customer_metadata.clone().unwrap_or(serde_json::json!({})),
             internal_metadata: serde_json::json!({}),
+            nics: None,
         };
         
         Ok(new_vm)
@@ -335,23 +371,21 @@ impl VmapiService {
     pub async fn vm_action(&self, uuid: &str, action: &str) -> Result<String, AppError> {
         info!("Performing action {} on VM with UUID: {}", action, uuid);
         
-        // Construct the URL for the VMAPI VM action endpoint
-        let action_url = format!("{}/vms/{}", self.base_url, uuid);
+        // Construct the URL for the VMAPI VM endpoint
+        let vm_url = format!("{}/vms/{}", self.base_url, uuid);
         
-        let payload = match action {
-            "start" => serde_json::json!({ "action": "start" }),
-            "stop" => serde_json::json!({ "action": "stop" }),
-            "reboot" => serde_json::json!({ "action": "reboot" }),
-            _ => return Err(AppError::BadRequest(format!("Unsupported action: {}", action))),
-        };
+        // Create the action payload
+        let action_payload = serde_json::json!({
+            "action": action
+        });
         
         // Make the request to VMAPI
         let response = self.client
-            .post(&action_url)
-            .json(&payload)
+            .post(&vm_url)
+            .json(&action_payload)
             .send()
             .await
-            .map_err(|e| AppError::InternalServerError(format!("Failed to perform VM action with VMAPI: {}", e)))?;
+            .map_err(|e| AppError::InternalServerError(format!("Failed to perform action on VM with VMAPI: {}", e)))?;
             
         if response.status().is_client_error() {
             return Err(AppError::NotFound(format!("VM with UUID {} not found", uuid)));
@@ -360,21 +394,23 @@ impl VmapiService {
         if !response.status().is_success() {
             let status = response.status();
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(AppError::InternalServerError(format!("Failed to perform VM action with VMAPI: {} - {}", status, error_text)));
+            return Err(AppError::InternalServerError(format!("Failed to perform action on VM with VMAPI: {} - {}", status, error_text)));
         }
         
-        // Parse the response JSON to get the job UUID
-        let job_data: serde_json::Value = response
+        // Parse the response JSON to get the job UUID if applicable
+        let response_data: serde_json::Value = response
             .json()
             .await
             .map_err(|e| AppError::InternalServerError(format!("Failed to parse VMAPI response: {}", e)))?;
             
-        let job_uuid = job_data["job_uuid"]
-            .as_str()
-            .ok_or_else(|| AppError::InternalServerError("Job UUID not found in VMAPI response".to_string()))?;
-            
-        info!("VM action job started: {} for VM: {}", job_uuid, uuid);
-        
-        Ok(job_uuid.to_string())
+        // Return job UUID if provided, otherwise success message
+        let job_uuid = response_data["job_uuid"].as_str().unwrap_or("");
+        if !job_uuid.is_empty() {
+            info!("VM action job started: {} for VM: {}", job_uuid, uuid);
+            Ok(format!("Action '{}' initiated with job ID: {}", action, job_uuid))
+        } else {
+            info!("VM action completed successfully: {} for VM: {}", action, uuid);
+            Ok(format!("Action '{}' completed successfully", action))
+        }
     }
 }

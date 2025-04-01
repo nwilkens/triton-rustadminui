@@ -5,10 +5,12 @@ use actix_web::{
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use tracing::info;
 
 use crate::auth::AuthenticatedUser;
 use crate::config::Config;
 use crate::error::AppError;
+use crate::services::VmapiService;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct VmListParams {
@@ -26,102 +28,70 @@ pub struct Vm {
     pub alias: String,
     pub state: String,
     pub brand: String,
+    #[serde(rename = "ram")]
     pub memory: u64,
+    // Disk can be in either quota or disk field
+    #[serde(default)]
+    pub quota: u64, 
+    #[serde(default)]
     pub disk: u64,
+    #[serde(default)]
     pub vcpus: u32,
+    // IPs are extracted from nics
+    #[serde(skip, default)]
     pub ips: Vec<String>,
     pub owner_uuid: String,
+    #[serde(default)]
     pub image_uuid: String,
+    #[serde(rename = "billing_id", default)]
     pub package_uuid: String,
+    #[serde(default)]
     pub server_uuid: String,
+    #[serde(rename = "create_timestamp", default)]
     pub created_at: String,
+    #[serde(default)]
     pub tags: serde_json::Value,
+    #[serde(default)]
     pub customer_metadata: serde_json::Value,
+    #[serde(default)]
     pub internal_metadata: serde_json::Value,
+    #[serde(default)]
+    pub nics: Option<Vec<serde_json::Value>>,
 }
 
 #[get("")]
 pub async fn list_vms(
     _user: AuthenticatedUser,
-    _config: Data<Config>,
+    config: Data<Config>,
     _query: Query<VmListParams>,
 ) -> Result<HttpResponse, AppError> {
-    // In a real implementation, this would call the VMAPI client to list VMs
-    // For now, we'll just return a placeholder
+    // Create an instance of the VMAPI service
+    info!("Listing VMs using VMAPI service");
+    let vmapi_service = VmapiService::new(config.vmapi_url.clone());
     
-    // Simulate a list of VMs
-    let vms = vec![
-        Vm {
-            uuid: Uuid::new_v4().to_string(),
-            alias: "test-vm-1".to_string(),
-            state: "running".to_string(),
-            brand: "kvm".to_string(),
-            memory: 1024,
-            disk: 20480,
-            vcpus: 1,
-            ips: vec!["10.0.0.1".to_string()],
-            owner_uuid: Uuid::new_v4().to_string(),
-            image_uuid: Uuid::new_v4().to_string(),
-            package_uuid: Uuid::new_v4().to_string(),
-            server_uuid: Uuid::new_v4().to_string(),
-            created_at: "2023-01-01T00:00:00Z".to_string(),
-            tags: serde_json::json!({"environment": "development"}),
-            customer_metadata: serde_json::json!({}),
-            internal_metadata: serde_json::json!({}),
-        },
-        Vm {
-            uuid: Uuid::new_v4().to_string(),
-            alias: "test-vm-2".to_string(),
-            state: "stopped".to_string(),
-            brand: "joyent".to_string(),
-            memory: 2048,
-            disk: 40960,
-            vcpus: 2,
-            ips: vec!["10.0.0.2".to_string()],
-            owner_uuid: Uuid::new_v4().to_string(),
-            image_uuid: Uuid::new_v4().to_string(),
-            package_uuid: Uuid::new_v4().to_string(),
-            server_uuid: Uuid::new_v4().to_string(),
-            created_at: "2023-01-02T00:00:00Z".to_string(),
-            tags: serde_json::json!({"environment": "production"}),
-            customer_metadata: serde_json::json!({}),
-            internal_metadata: serde_json::json!({}),
-        },
-    ];
+    // Call the service to get the VMs
+    let vms = vmapi_service.list_vms().await?;
     
+    // Return the VMs as JSON
     Ok(HttpResponse::Ok().json(vms))
 }
 
 #[get("/{uuid}")]
 pub async fn get_vm(
     _user: AuthenticatedUser,
-    _config: Data<Config>,
+    config: Data<Config>,
     path: Path<String>,
 ) -> Result<HttpResponse, AppError> {
     let uuid = path.into_inner();
     
-    // In a real implementation, this would call the VMAPI client to get a VM
-    // For now, we'll just return a placeholder
+    // Create an instance of the VMAPI service
+    info!("Getting VM {} using VMAPI service", uuid);
+    let vmapi_service = VmapiService::new(config.vmapi_url.clone());
     
-    let vm = Vm {
-        uuid: uuid,
-        alias: "test-vm".to_string(),
-        state: "running".to_string(),
-        brand: "kvm".to_string(),
-        memory: 1024,
-        disk: 20480,
-        vcpus: 1,
-        ips: vec!["10.0.0.1".to_string()],
-        owner_uuid: Uuid::new_v4().to_string(),
-        image_uuid: Uuid::new_v4().to_string(),
-        package_uuid: Uuid::new_v4().to_string(),
-        server_uuid: Uuid::new_v4().to_string(),
-        created_at: "2023-01-01T00:00:00Z".to_string(),
-        tags: serde_json::json!({"environment": "development"}),
-        customer_metadata: serde_json::json!({}),
-        internal_metadata: serde_json::json!({}),
-    };
+    // Call the service to get the VM
+    let vm = vmapi_service.get_vm(&uuid).await?;
     
+    // Return the VM as JSON
     Ok(HttpResponse::Ok().json(vm))
 }
 
@@ -152,6 +122,7 @@ pub async fn create_vm(
         state: "provisioning".to_string(),
         brand: vm_req.brand.clone(),
         memory: 1024,
+        quota: 20480,
         disk: 20480,
         vcpus: 1,
         ips: vec![],
@@ -163,6 +134,7 @@ pub async fn create_vm(
         tags: vm_req.tags.clone().unwrap_or(serde_json::json!({})),
         customer_metadata: vm_req.customer_metadata.clone().unwrap_or(serde_json::json!({})),
         internal_metadata: serde_json::json!({}),
+        nics: None,
     };
     
     Ok(HttpResponse::Created().json(vm))
@@ -194,6 +166,7 @@ pub async fn update_vm(
         state: "running".to_string(),
         brand: "kvm".to_string(),
         memory: 1024,
+        quota: 20480,
         disk: 20480,
         vcpus: 1,
         ips: vec!["10.0.0.1".to_string()],
@@ -205,6 +178,7 @@ pub async fn update_vm(
         tags: vm_req.tags.clone().unwrap_or(serde_json::json!({"environment": "development"})),
         customer_metadata: vm_req.customer_metadata.clone().unwrap_or(serde_json::json!({})),
         internal_metadata: serde_json::json!({}),
+        nics: None,
     };
     
     Ok(HttpResponse::Ok().json(vm))
@@ -230,6 +204,7 @@ pub async fn update_vm_partial(
         state: "running".to_string(),
         brand: "kvm".to_string(),
         memory: 1024,
+        quota: 20480,
         disk: 20480,
         vcpus: 1,
         ips: vec!["10.0.0.1".to_string()],
@@ -241,6 +216,7 @@ pub async fn update_vm_partial(
         tags: vm_req.tags.clone().unwrap_or(serde_json::json!({"environment": "development"})),
         customer_metadata: vm_req.customer_metadata.clone().unwrap_or(serde_json::json!({})),
         internal_metadata: serde_json::json!({}),
+        nics: None,
     };
     
     Ok(HttpResponse::Ok().json(vm))
