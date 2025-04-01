@@ -304,8 +304,66 @@ const VMsList = () => {
         return 'bg-blue-100 text-blue-800';
       case 'failed':
         return 'bg-red-100 text-red-800';
+      case 'destroyed':
+        return 'bg-red-100 text-red-800';
+      case 'incomplete':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'unknown':
+        return 'bg-purple-100 text-purple-800';
+      case 'active':
+        return 'bg-blue-100 text-blue-800';
       default:
         return 'bg-yellow-100 text-yellow-800';
+    }
+  };
+  
+  const getStateIcon = (state: string) => {
+    switch(state.toLowerCase()) {
+      case 'running':
+        return (
+          <div className="flex-shrink-0 h-3 w-3 rounded-full bg-green-400" 
+               title="Running"></div>
+        );
+      case 'stopped':
+        return (
+          <div className="flex-shrink-0 h-3 w-3 rounded-full bg-gray-400" 
+               title="Stopped"></div>
+        );
+      case 'provisioning':
+        return (
+          <div className="flex-shrink-0 h-3 w-3 rounded-full bg-blue-400 animate-pulse" 
+               title="Provisioning"></div>
+        );
+      case 'failed':
+        return (
+          <div className="flex-shrink-0 h-3 w-3 rounded-full bg-red-500" 
+               title="Failed"></div>
+        );
+      case 'destroyed':
+        return (
+          <div className="flex-shrink-0 h-3 w-3 rounded-full bg-red-800" 
+               title="Destroyed"></div>
+        );
+      case 'incomplete':
+        return (
+          <div className="flex-shrink-0 h-3 w-3 rounded-full bg-yellow-400" 
+               title="Incomplete"></div>
+        );
+      case 'unknown':
+        return (
+          <div className="flex-shrink-0 h-3 w-3 rounded-full bg-purple-400" 
+               title="Unknown"></div>
+        );
+      case 'active':
+        return (
+          <div className="flex-shrink-0 h-3 w-3 rounded-full bg-blue-600" 
+               title="Active"></div>
+        );
+      default:
+        return (
+          <div className="flex-shrink-0 h-3 w-3 rounded-full bg-yellow-400" 
+               title={state}></div>
+        );
     }
   };
 
@@ -494,19 +552,13 @@ const VMsList = () => {
                       Name
                     </th>
                     <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                      State
-                    </th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                      Image
-                    </th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                      Server
+                      Status
                     </th>
                     <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                       IP Address
                     </th>
                     <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                      Specs
+                      Resources
                     </th>
                     <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
                       <span className="sr-only">Actions</span>
@@ -534,11 +586,60 @@ const VMsList = () => {
                       return (
                         <tr key={vm.uuid} className="hover:bg-gray-50">
                           <td className="whitespace-nowrap py-4 pl-4 pr-3 sm:pl-6">
-                            <div className="text-sm font-medium text-gray-900">
-                              {vm.alias}
+                            <div className="flex items-start space-x-3">
+                              <div className="flex-shrink-0 mt-1">
+                                {getStateIcon(vm.state)}
+                              </div>
+                              <div>
+                                <Link to={`/vms/${vm.uuid}`} className="text-sm font-medium text-indigo-600 hover:text-indigo-900">
+                                  {vm.alias}
+                                </Link>
+                                <div className="mt-1 flex flex-wrap items-center text-xs text-gray-500">
+                                  <span className="inline-block">{serverDetails.name || 'No server'}</span>
+                                  <span className="mx-1 text-gray-300">•</span>
+                                  <span className="inline-block">{getImageDetails(vm.image_uuid)}</span>
+                                </div>
+                                <div className="flex items-center text-xs text-gray-500 mt-0.5">
+                                  <span>{vm.brand}</span>
+                                  {vm.uuid && (
+                                    <span className="ml-1 text-gray-400 font-mono text-2xs truncate max-w-[120px]" title={vm.uuid}>
+                                      ({vm.uuid.substring(0, 8)}...)
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
                             </div>
-                            <div className="text-xs text-gray-500 truncate max-w-xs">
-                              {vm.uuid}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-4 text-sm">
+                            <div className="flex flex-col space-y-1">
+                              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(vm.state)}`}>
+                                {vm.state}
+                              </span>
+                              <div className="text-xs text-gray-500">
+                                {vm.create_timestamp || vm.created_at ? 
+                                  new Date(vm.create_timestamp || vm.created_at || '').toLocaleDateString() : ''}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-4 text-sm">
+                            <div className="flex items-center">
+                              <span className="text-gray-900 font-mono">{formatIPAddresses(vm)}</span>
+                              {formatIPAddresses(vm) !== "N/A" && (
+                                <button 
+                                  title="Copy IP Address"
+                                  className="ml-2 text-gray-400 hover:text-gray-600"
+                                  onClick={() => {
+                                    const ip = getIPAddresses(vm)[0];
+                                    if (ip) {
+                                      navigator.clipboard.writeText(ip);
+                                    }
+                                  }}
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                                  </svg>
+                                </button>
+                              )}
                             </div>
                             {vm.dns_domain && (
                               <div className="text-xs text-gray-500 mt-1">
@@ -547,68 +648,94 @@ const VMsList = () => {
                             )}
                           </td>
                           <td className="whitespace-nowrap px-3 py-4 text-sm">
-                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(vm.state)}`}>
-                              {vm.state}
-                            </span>
-                            <div className="text-xs text-gray-500 mt-1">
-                              {vm.brand}
+                            <div className="flex items-center space-x-2">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                              </svg>
+                              <span className="font-medium">{formatMemory(vm)}</span>
+                              <span className="text-gray-300">/</span>
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                              </svg>
+                              <span className="font-medium">{formatDisk(vm)}</span>
                             </div>
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                            {getImageDetails(vm.image_uuid)}
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                            {serverDetails.uuid ? (
-                              <Link to={`/servers/${serverDetails.uuid}`} className="text-indigo-600 hover:text-indigo-900">
-                                {serverDetails.name}
-                              </Link>
-                            ) : (
-                              serverDetails.name
-                            )}
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                            {formatIPAddresses(vm)}
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-4 text-sm">
-                            <div className="flex flex-col space-y-1">
-                              <div className="flex items-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                </svg>
-                                <span className="text-gray-900">{formatMemory(vm)}</span>
-                              </div>
-                              <div className="flex items-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                                </svg>
-                                <span className="text-gray-900">{formatDisk(vm)}</span>
-                              </div>
-                              <div className="flex items-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                                <span className="text-gray-900">{calculateVCPUs(vm)} vCPUs</span>
-                                {vm.cpu_cap && <span className="text-xs text-gray-500 ml-1">(Cap: {vm.cpu_cap}%)</span>}
-                              </div>
+                            <div className="mt-1 flex items-center text-xs text-gray-500">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                              <span>{calculateVCPUs(vm)} vCPUs</span>
+                              {vm.cpu_cap && <span className="ml-1">(Cap: {vm.cpu_cap}%)</span>}
                             </div>
                           </td>
                           <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                            <div className="flex flex-col space-y-2">
-                              <Link to={`/vms/${vm.uuid}`} className="text-indigo-600 hover:text-indigo-900">
-                                View
-                              </Link>
-                              {vm.state.toLowerCase() === 'running' ? (
-                                <button className="text-red-600 hover:text-red-900">
-                                  Stop
-                                </button>
-                              ) : (
-                                <button className="text-green-600 hover:text-green-900">
-                                  Start
-                                </button>
-                              )}
-                              <button className="text-gray-600 hover:text-gray-900">
-                                Reboot
+                            <div className="dropdown relative inline-block">
+                              <button className="rounded-md bg-white p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                  <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                                </svg>
                               </button>
+                              <div className="dropdown-menu hidden absolute right-0 mt-2 py-2 w-48 bg-white rounded-md shadow-xl z-10">
+                                <Link to={`/vms/${vm.uuid}`} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900">
+                                  <div className="flex items-center">
+                                    <svg className="mr-3 h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                    View details
+                                  </div>
+                                </Link>
+                                
+                                {vm.state.toLowerCase() === 'running' ? (
+                                  <>
+                                    <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900">
+                                      <div className="flex items-center">
+                                        <svg className="mr-3 h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        Stop
+                                      </div>
+                                    </button>
+                                    <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900">
+                                      <div className="flex items-center">
+                                        <svg className="mr-3 h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                        </svg>
+                                        Reboot
+                                      </div>
+                                    </button>
+                                  </>
+                                ) : (
+                                  <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900">
+                                    <div className="flex items-center">
+                                      <svg className="mr-3 h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                      </svg>
+                                      Start
+                                    </div>
+                                  </button>
+                                )}
+                                
+                                <div className="border-t border-gray-100 my-1"></div>
+                                
+                                <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900">
+                                  <div className="flex items-center">
+                                    <svg className="mr-3 h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                    Take snapshot
+                                  </div>
+                                </button>
+                                
+                                <button className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-900">
+                                  <div className="flex items-center">
+                                    <svg className="mr-3 h-4 w-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                    Delete
+                                  </div>
+                                </button>
+                              </div>
                             </div>
                           </td>
                         </tr>
